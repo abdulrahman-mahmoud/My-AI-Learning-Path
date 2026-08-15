@@ -2,10 +2,11 @@
 
 This is the main learning folder in the repo.
 
-Right now it has two tracks:
+Right now it has three tracks:
 
 - Linear Regression
 - Logistic Regression
+- Decision Trees
 
 ## What is inside
 
@@ -13,12 +14,14 @@ Right now it has two tracks:
 |---|---|
 | [`Linear Regression/`](./Linear%20Regression/README.md) | Docs, scripts, and plots for linear regression |
 | [`Logistic Regression/`](./Logistic%20Regression/README.md) | Docs and scripts for logistic regression |
+| [`Decision Trees/`](./Decision%20Trees/README.md) | Docs, scripts, and plots for decision trees |
 
 ## Current state
 
 - Linear regression is the more complete track.
 - Logistic regression is also in place and usable on its own.
-- Both tracks already have markdown docs.
+- Decision trees builds on both and is in place with its own docs, scripts, and plots.
+- All three tracks already have markdown docs.
 
 ## Navigation
 
@@ -26,3 +29,4 @@ Right now it has two tracks:
 - [Books](../Books/README.md)
 - [Linear Regression](./Linear%20Regression/README.md)
 - [Logistic Regression](./Logistic%20Regression/README.md)
+- [Decision Trees](./Decision%20Trees/README.md)

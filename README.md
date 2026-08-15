@@ -6,16 +6,17 @@ It is not a polished product repo. It is a study repo. I keep the theory, code, 
 
 ## What is in here
 
-The repo has two main study tracks:
+The repo has three main study tracks:
 
 - Linear Regression
 - Logistic Regression
+- Decision Trees
 
 It also has:
 
 - Two reference books in PDF form
-- Markdown docs that explain the regression work
-- PNG plots for the linear regression material
+- Markdown docs that explain the regression and tree work
+- PNG plots for the linear regression and decision tree material
 
 ## How I am using this repo
 
@@ -35,6 +36,7 @@ That is why the repo has separate folders for docs, scripts, and plots.
 | Books | Done | Two PDF textbooks |
 | Linear Regression | In good shape | Docs, Python scripts, and plots images |
 | Logistic Regression | In good shape | Docs and Python scripts |
+| Decision Trees | In good shape | Docs, Python scripts, and plots images |
 
 ## Repository layout
 
@@ -48,7 +50,8 @@ That is why the repo has separate folders for docs, scripts, and plots.
 1. Open [`Machine Learning/`](./Machine%20Learning/README.md).
 2. Go into [`Linear Regression/`](./Machine%20Learning/Linear%20Regression/README.md) first. This is the most complete part.
 3. Then check [`Logistic Regression/`](./Machine%20Learning/Logistic%20Regression/README.md).
-4. Use [`Books/`](./Books/README.md) if you want the reference material.
+4. Continue with [`Decision Trees/`](./Machine%20Learning/Decision%20Trees/README.md).
+5. Use [`Books/`](./Books/README.md) if you want the reference material.
 
 ## Notes
 

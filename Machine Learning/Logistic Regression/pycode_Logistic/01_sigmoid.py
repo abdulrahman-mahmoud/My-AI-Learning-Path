@@ -14,3 +14,6 @@ if __name__ == "__main__":
     print(f"sigmoid(0) = {sigmoid(0):.4f}")
     print(f"sigmoid(10) = {sigmoid(10):.6f}")
     print(f"sigmoid(-10) = {sigmoid(-10):.6f}")
+    print(f"sigmoid_derivative(0) = {sigmoid_derivative(0):.4f}")
+    print(f"sigmoid_derivative(10) = {sigmoid_derivative(10):.6f}")
+    print(f"sigmoid_derivative(-10) = {sigmoid_derivative(-10):.6f}")
