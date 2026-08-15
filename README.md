@@ -57,3 +57,10 @@ That is why the repo has separate folders for docs, scripts, and plots.
 
 - I kept the folder names exactly as they are, including `EXPALINTION`.
 - This repo has documentation, code, and plots, but no notebooks or datasets yet.
+
+
+## License
+
+The original work in this repository — including the Python code and scripts, implementations, original documentation and notes (Markdown files authored by the repository owner), and original plots/figures — is licensed under the MIT License. See the repository root LICENSE file for the full text.
+
+The PDF books included in the Books/ folder (including, but not limited to, "An Introduction to Statistical Learning" and "The Elements of Statistical Learning") are third‑party copyrighted works and are NOT covered by this repository's MIT License. All rights to those books remain with their respective authors and publishers. The books are included in this repository as-is and have not been modified or removed.
