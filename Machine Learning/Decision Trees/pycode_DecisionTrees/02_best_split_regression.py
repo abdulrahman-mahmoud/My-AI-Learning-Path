@@ -1,6 +1,6 @@
 #----------------------------
 #  02: Finding the best REGRESSION split
-#  Tiny dataset from documentation Section 8
+#  Tiny dataset from documentation Section 9
 #  X = [1..6], y = [2,3,4,10,11,12]
 #  Candidate splits at midpoints between consecutive X values.
 #  Score = sum of squared errors of the two children.
@@ -8,14 +8,11 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
-
-PLOT_DIR = Path(__file__).resolve().parent.parent / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 #------------------------------
 #  Data
 #------------------------------
+
 X = np.array([1, 2, 3, 4, 5, 6])
 y = np.array([2, 3, 4, 10, 11, 12])
 
@@ -24,7 +21,7 @@ def squared_error(vals):
     return np.sum((vals - mu) ** 2)
 
 def region_mean(vals):
-    # The leaf prediction that minimises squared error is the mean (Section 7)
+    # The leaf prediction that minimises squared error is the mean (Section 10)
     return np.mean(vals)
 
 #------------------------------
@@ -81,6 +78,6 @@ axes[1].legend()
 axes[1].grid(alpha=0.3)
 
 plt.tight_layout()
-plt.savefig(PLOT_DIR / '02_best_split_regression.png', dpi=150)
+plt.savefig('02_best_split_regression.png', dpi=150)
 plt.close()
 print("\n[Plot saved: plots/02_best_split_regression.png]")

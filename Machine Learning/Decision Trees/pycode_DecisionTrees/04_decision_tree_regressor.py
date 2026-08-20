@@ -9,10 +9,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
-
-PLOT_DIR = Path(__file__).resolve().parent.parent / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 #========================================================
 #  Node types
@@ -58,7 +54,7 @@ def best_split(X, y):
 
 def build_tree(X, y, depth, max_depth, min_samples_split):
     n = len(y)
-    # stopping conditions (Section 16): depth limit, min samples, pure node
+    # stopping conditions (Section 13): depth limit, min samples, pure node
     if depth >= max_depth or n < min_samples_split or len(np.unique(y)) == 1:
         return Leaf(np.mean(y))
 
@@ -103,7 +99,7 @@ class DecisionTreeRegressor:
 #  Demo (guarded so importing this module does not run it)
 #========================================================
 def main():
-    # Tiny dataset walkthrough (documentation Section 21.1)
+    # Tiny dataset walkthrough (documentation Section 17.1)
     X = np.array([1, 2, 3, 4, 5, 6]).reshape(-1, 1)
     y = np.array([2, 3, 4, 10, 11, 12])
 
@@ -133,7 +129,7 @@ def main():
     ax.legend()
     ax.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig(PLOT_DIR / '04_regression_tree.png', dpi=150)
+    plt.savefig('04_regression_tree.png', dpi=150)
     plt.close()
     print("\n[Plot saved: plots/04_regression_tree.png]")
 

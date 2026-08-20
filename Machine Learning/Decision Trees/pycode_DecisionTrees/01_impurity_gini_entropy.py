@@ -1,6 +1,6 @@
 #----------------------------
 #  01: Gini Impurity and Entropy from scratch
-#  Node examples used in the documentation (Section 10-11)
+#  Node examples used in the documentation (Sections 5-6)
 #  G = 1 - sum(p_k^2)          (Gini impurity)
 #  H = -sum(p_k log p_k)       (entropy)
 #----------------------------
@@ -8,10 +8,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-
-PLOT_DIR = Path(__file__).resolve().parent.parent / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
-
 #------------------------------
 #  Impurity helpers
 #------------------------------
@@ -70,6 +66,6 @@ ax.set_title('Gini impurity and entropy for a two-class node')
 ax.legend()
 ax.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(PLOT_DIR / '01_impurity_gini_entropy.png', dpi=150)
+plt.savefig('01_impurity_gini_entropy.png', dpi=150)
 plt.close()
 print("\n[Plot saved: plots/01_impurity_gini_entropy.png]")

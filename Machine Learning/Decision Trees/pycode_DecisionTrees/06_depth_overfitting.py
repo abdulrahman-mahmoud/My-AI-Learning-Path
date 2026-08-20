@@ -7,7 +7,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 
 # import the from-scratch regressor defined in the same folder
 import importlib.util, os
@@ -15,8 +14,6 @@ spec = importlib.util.spec_from_file_location("dt_reg", os.path.join(os.path.dir
 dt_reg = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dt_reg)
 DecisionTreeRegressor = dt_reg.DecisionTreeRegressor
-PLOT_DIR = Path(__file__).resolve().parent.parent / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 #------------------------------
 #  Data: noisy sine (non-linear relationship)
@@ -89,6 +86,6 @@ axes[1].legend()
 axes[1].grid(alpha=0.3)
 
 plt.tight_layout()
-plt.savefig(PLOT_DIR / '06_depth_overfitting.png', dpi=150)
+plt.savefig('06_depth_overfitting.png', dpi=150)
 plt.close()
 print("\n[Plot saved: plots/06_depth_overfitting.png]")

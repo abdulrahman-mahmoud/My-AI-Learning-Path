@@ -12,10 +12,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
-
-PLOT_DIR = Path(__file__).resolve().parent.parent / "plots"
-PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 #========================================================
 #  Node types
@@ -84,7 +80,7 @@ def best_split(X, y, n_classes, criterion):
 
 def build_tree(X, y, depth, max_depth, min_samples_split, n_classes, criterion):
     n = len(y)
-    # stopping conditions (Section 16)
+    # stopping conditions (Section 13)
     if depth >= max_depth or n < min_samples_split or len(np.unique(y)) == 1:
         return Leaf(y, n_classes)
 
@@ -153,7 +149,7 @@ class DecisionTreeClassifier:
 #  Demo (guarded so importing this module does not run it)
 #========================================================
 def main():
-    # Tiny classification walkthrough (documentation Section 21.2)
+    # Tiny classification walkthrough (documentation Section 17.2)
     Xc = np.array([1, 2, 3, 4, 5, 6]).reshape(-1, 1)
     yc = np.array([0, 0, 1, 1, 1, 0])
 

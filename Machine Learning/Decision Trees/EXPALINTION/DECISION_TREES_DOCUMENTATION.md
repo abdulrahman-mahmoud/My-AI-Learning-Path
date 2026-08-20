@@ -1,992 +1,756 @@
-# Decision Trees Implementation Documentation
+# Decision Trees & Information Theory
 
-> A comprehensive guide bridging theory from *An Introduction to Statistical Learning* (ISL) and *The Elements of Statistical Learning* (ESL) with a practical NumPy-based implementation.
+A practical, conversational guide to decision trees: what they are, how they learn, and how to build one from scratch in NumPy.
+
+## Table of Contents
+
+[**Part 1 — Introduction to Decision Trees**](#part-1)
+1. [What is a Decision Tree?](#sec-1-1)
+2. [A Simple Decision Tree Example](#sec-1-2)
+3. [Anatomy of a Decision Tree](#sec-1-3)
+4. [Why Are Decision Trees a Good AI/ML Choice?](#sec-1-4)
+5. [Why Are Decision Trees Different from Linear Models?](#sec-1-5)
+6. [The Two Main Types of Decision Trees](#sec-1-6)
+
+[**Part 2 — Decision Tree Classification & Information Theory**](#part-2)
+1. [What a Classification Tree Predicts](#sec-2-1)
+2. [Majority Class and Class Probabilities](#sec-2-2)
+3. [Pure vs. Impure Nodes](#sec-2-3)
+4. [The Central Problem: Which Question Should the Tree Ask?](#sec-2-4)
+5. [Information Theory: Measuring Uncertainty](#sec-2-5)
+
+[**Part 3 — Entropy, Gini Impurity, and Information Gain**](#part-3)
+1. [Entropy: The Expected Surprise, Made Concrete](#sec-3-1)
+2. [Gini Impurity: The Misclassification Story](#sec-3-2)
+3. [Entropy vs. Gini](#sec-3-3)
+4. [Weighted Child Impurity](#sec-3-4)
+5. [Information Gain](#sec-3-5)
+
+[**Part 4 — Building the Tree**](#part-4)
+1. [The Strategy: Recursive Binary Splitting](#sec-4-1)
+2. [Why It's Greedy](#sec-4-2)
+3. [Searching for the Best Split](#sec-4-3)
+4. [The Tree in Python — One Example From the Code](#sec-4-4)
+5. [Stopping Criteria](#sec-4-5)
+
+[**Part 5 — Overfitting and Controlling Tree Size**](#part-5)
+1. [What Overfitting Looks Like](#sec-5-1)
+2. [The Bias-Variance Tradeoff](#sec-5-2)
+3. [Early Stopping: Control the Tree While Building](#sec-5-3)
+4. [Pruning: Grow First, Then Cut](#sec-5-4)
+5. [Pruning vs. Early Stopping](#sec-5-5)
+
+[**Part 6 — Regression Trees**](#part-6)
+1. [Same Machine, Different Score](#sec-6-1)
+2. [The Split Score for Regression](#sec-6-2)
+3. [Worked Example](#sec-6-3)
+4. [Regression vs. Classification: Side by Side](#sec-6-4)
+
+[**Part 7 — Walkthroughs, Visualization, and scikit-learn**](#part-7)
+1. [Tiny Dataset Walkthroughs](#sec-7-1)
+2. [Visualization](#sec-7-2)
+3. [The scikit-learn Version](#sec-7-3)
+
+[**Part 8 — Decision Trees in Practice**](#part-8)
+1. [Decision Trees vs. Linear and Logistic Regression](#sec-8-1)
+2. [Advantages and Disadvantages](#sec-8-2)
+3. [Hyperparameters at a Glance](#sec-8-3)
+4. [Computational Considerations](#sec-8-4)
+5. [Common Misconceptions](#sec-8-5)
+6. [Connection to Ensemble Learning](#sec-8-6)
+7. [Key Takeaways](#sec-8-7)
+8. [References](#sec-8-8)
+
+**Figures**
+- [Figure 1 — `01_impurity_gini_entropy.png` — Part 3, Entropy vs. Gini](#figure-1)
+- [Figure 2 — `03_best_split_classification.png` — Part 4, The Tree in Python](#figure-2)
+- [Figure 3 — `06_depth_overfitting.png` — Part 5, The Bias-Variance Tradeoff](#figure-3)
+- [Figure 4 — `02_best_split_regression.png` — Part 6, Worked Example](#figure-4)
+- [Figure 5 — `04_regression_tree.png` — Part 7, Visualization](#figure-5)
+- [Figure 6 — `05_classification_regions.png` — Part 7, Visualization](#figure-6)
 
 ---
 
-## 1. Introduction
+<a id="part-1"></a>
+# Part 1 — Introduction to Decision Trees
 
-### What is a Decision Tree?
+<a id="sec-1-1"></a>
+## 1. What is a Decision Tree?
 
-A decision tree is a supervised learning method that models the relationship between a response $Y$ and one or more predictor variables $X_1, X_2, \dots, X_p$ by **repeatedly asking simple questions about the features** and using the answers to route each observation into a final region that carries a prediction.
+A Decision Tree is a model that makes predictions by asking a sequence of simple yes/no questions. Each question is about one feature, and the answer sends the data point down one path, question after question, until it reaches a final answer — the prediction.
 
-The two models studied so far in this repository take a **global** approach:
+Think of it like a flowchart, or a game of 20 questions: you start with one question, and depending on the answer you ask another, then another, until you have enough information to give a final answer.
 
-> Logistic Regression used a mathematical function to model the relationship between features and the target. Decision Trees take a fundamentally different approach: instead of fitting one global function, they partition the feature space into regions.
+That's the whole idea. No complicated math required to understand it — a decision tree is just if-else logic, structured as a tree.
 
-Linear regression fits a single linear function over the whole feature space. Logistic regression fits a single logistic function. A decision tree fits **no formula at all**; it divides the space into regions and predicts with a simple local rule inside each region.
+<a id="sec-1-2"></a>
+## 2. A Simple Decision Tree Example
 
-**Reference:**
-
-> Book: ISLP  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: The Basics of Decision Trees
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Tree-based methods
-
-### Why Decision Trees Matter in Machine Learning
-
-- They are **easy to understand and interpret**: the model reads like a set of if-then rules.
-- They **require little preprocessing**: no feature scaling or explicit interaction terms.
-- They **naturally handle nonlinear relationships** and interactions.
-- They work for **both regression and classification**.
-- They are the **building block** of powerful ensemble methods (bagging, random forests, boosting), which is why they are studied before those topics (ISL, Chapter 8; ESL, Chapter 15).
-
-### Purpose of This Implementation
-
-The implementation provides a from-scratch decision tree toolkit using only NumPy. It includes:
-
-- **Impurity measures** (Gini impurity and entropy) computed from class proportions
-- **Greedy binary split selection** for regression (squared error) and classification (weighted impurity)
-- **`DecisionTreeRegressor`** with recursive construction and piecewise-constant prediction
-- **`DecisionTreeClassifier`** with majority-class and probability prediction
-- **Stopping criteria** (max depth, minimum samples) that control tree complexity
-- **Visualizations** of piecewise-constant fits and axis-aligned decision regions
-- A **scikit-learn comparison** to connect the educational implementation to the production library
-
-### How the Algorithm Works at a High Level
-
-1. **Ask a question** about one feature, e.g. "Is $X_j \le s$?"
-2. **Split the data** into the two groups that answer yes and no.
-3. **Repeat recursively** inside each group.
-4. **Stop** when a stopping condition is met and return the group's prediction.
-5. **Predict** a new observation by sending it down the tree following the question answers.
+Let's predict whether a customer will buy a product, using two features: `age` and `income`.
 
 ```
-Is age > 30?
-├── Yes → Is income > 50k?
-│         ├── Yes → Buy
-│         └── No  → Don't Buy
-└── No  → Don't Buy
+                Is Age > 30?
+               /            \
+             Yes              No
+             /                  \
+    Income > 50K?              Don't Buy
+      /        \
+    Yes         No
+    /            \
+  Buy        Don't Buy
 ```
 
-This tiny example already contains every idea in decision trees. We will spend the rest of the chapter unpacking it: what each part is called, why splitting helps, how to choose the best split, and how to control how deep the tree grows.
+Now let's send a few customers through the tree and watch how each one reaches a prediction.
 
----
+**Customer 1: age 40, income 60K**
+- Root: "Is Age > 30?" → Yes → move down the left branch.
+- "Income > 50K?" → Yes (60K > 50K) → **Buy**.
 
-## 2. Prerequisites
+**Customer 2: age 25, income 120K**
+- Root: "Is Age > 30?" → No → straight to the right leaf → **Don't Buy**.
+- The second question is never even asked. High income doesn't matter if the customer is young — this tree says so.
 
-Every learning chapter in this repository builds on what came before. This section separates the concepts that should already be familiar from those that are introduced fresh here.
+**Customer 3: age 35, income 30K**
+- Root: "Is Age > 30?" → Yes → down the left branch.
+- "Income > 50K?" → No (30K < 50K) → **Don't Buy**.
 
-### Already Covered
+Every customer starts at the root, answers questions, and ends at a leaf. The leaf they land in is their prediction.
 
-The repository has already covered:
+<a id="sec-1-3"></a>
+## 3. Anatomy of a Decision Tree
 
-- **Supervised learning**: the setting of learning a mapping $f(X) \to Y$ from labeled training data $(x_i, y_i)$.
-- **Features and targets**: the predictors $X = (X_1, \dots, X_p)$ and the response $Y$.
-- **Regression vs. classification**: a continuous response vs. a categorical response.
-- **Loss functions**: how we quantify prediction error (RSS/MSE for regression, log-loss for classification).
-- **Optimization**: how models choose parameters to minimize a loss.
-- **Probability**: proportions, conditional probability, and class probabilities.
-- **Overfitting and the bias-variance tradeoff**: complex models fit training data better but generalize worse (ISL, Section 2.2.2).
-- **Basic calculus**: derivatives used in the derivation of leaf predictions.
-
-We do **not** reteach these chapters. Instead, each is briefly reminded and connected to trees when it becomes relevant. For example:
-
-> Linear regression minimized RSS by choosing coefficients. Decision trees also use squared error to judge splits, but instead of adjusting coefficients, they choose which **partition** of the data minimizes the error.
-
-### Not Yet Covered (New Prerequisites)
-
-The following concepts are needed for decision trees and are **taught from zero** in this document because they have not appeared before:
-
-- **Recursive algorithms** (Section 14)
-- **Nodes and trees as data structures** (Sections 3-4, 20)
-- **Impurity** (Section 8)
-- **Gini impurity and entropy** (Sections 9-10)
-- **Information gain** (Section 11)
-- **Weighted averages** (Section 12)
-- **Recursive binary splitting** (Section 13)
-
-Each of these is introduced exactly where it first becomes necessary, so that no term is used before it is explained.
-
----
-
-## 3. The Core Question and the Intuition
-
-> **How can a model make predictions by repeatedly asking simple questions about the features?**
-
-Start with a concrete everyday situation. Suppose we want to predict whether a customer **buys** a product. We have two features: `age` and `income`. A simple approach that requires no math at all:
+Here's the same example tree with every part labeled:
 
 ```
-Is age > 30?
-├── Yes → Is income > 50k?
-│         ├── Yes → Buy
-│         └── No  → Don't Buy
-└── No  → Don't Buy
+                 ┌──────────────────┐
+                 │   ROOT NODE      │  ← the first node, holds all the data
+                 │  "Is Age > 30?"  │
+                 └────────┬─────────┘
+                    branch│
+              ┌───────────┴───────────┐
+           Yes│                       │No
+              ▼                       ▼
+     ┌──────────────────┐    ┌────────────────┐
+     │  INTERNAL NODE   │    │   LEAF NODE    │
+     │ "Income > 50K?"  │    │  "Don't Buy"   │  ← prediction
+     └────────┬─────────┘    └────────────────┘
+              │
+         ┌────┴────┐
+      Yes│         │No
+         ▼         ▼
+   ┌─────────┐ ┌─────────┐
+   │  LEAF   │ │  LEAF   │
+   │  "Buy"  │ │"Don't Buy"│
+   └─────────┘ └─────────┘
 ```
 
-Read this from top to bottom. We start at the **root**. For a new customer we ask the top question. Depending on the answer we go down one **branch** to the next question, and finally arrive at a **leaf** that gives a prediction.
+Now, component by component, using this tree as the example:
 
-Why does this help? Because each question **divides the observations into smaller groups** that are more homogeneous. Instead of describing all customers with one rule, we let different subgroups have different rules. A 40-year-old with high income gets a different prediction from a 25-year-old. The questions let the model specialize.
+| Component | Meaning | In our example |
+|-----------|---------|----------------|
+| **Root Node** | The topmost node. Every data point starts here. | `"Is Age > 30?"` |
+| **Internal Node** | A node that asks a question and splits the data. | `"Income > 50K?"` |
+| **Branch / Edge** | The connection between a parent node and its children. | The lines joining the nodes |
+| **Leaf Node** | An end node with no questions. Holds the final prediction. | `"Buy"`, `"Don't Buy"` |
+| **Split** | Dividing a node's data using one question. | Splitting on `age > 30` |
+| **Feature** | The variable the question is about. | `age`, `income` |
+| **Threshold** | The number a feature is compared to. | `30`, `50K` |
+| **Prediction** | The final answer stored at a leaf. | `Buy` / `Don't Buy` |
 
-The whole point of the algorithm will be to decide *which questions to ask*, *where to draw the thresholds*, and *when to stop*. Everything else in this chapter is detail.
+The pattern is simple: one **root**, one or more **internal nodes** that ask questions, **branches** that connect them, and **leaves** at the bottom that hold predictions.
 
----
+<a id="sec-1-4"></a>
+## 4. Why Are Decision Trees a Good AI/ML Choice?
 
-## 4. Terminology
+### Why Are Decision Trees a Good AI Choice?
 
-Every decision tree problem uses the following vocabulary. Learn these terms now so the rest of the chapter is unambiguous.
+- **They model nonlinear relationships.** If the relationship between features and the target isn't a straight line, a tree doesn't care — it just keeps splitting until the regions fit the data.
+- **They naturally represent conditional logic.** If-else rules are how humans think and explain things, so the model's reasoning feels familiar.
+- **They capture feature interactions.** In our example, income only matters for customers over 30. A tree discovers interactions like this on its own, without you engineering them.
+- **They're easy to interpret.** A small tree can be explained to someone who has never heard of machine learning.
+- **They make few assumptions.** Linear models assume things like linearity and normally distributed errors. A tree assumes almost nothing about the data.
+- **They work for both classification and regression.** The same tree machinery handles a class label or a number.
+- **They don't need feature scaling.** A threshold like "income > 50K" lives on the feature's own scale, so normalizing features isn't required.
 
-| Term | Meaning |
-|------|---------|
-| **Root node** | The first, topmost node. It contains all training observations. |
-| **Node** | Any point in the tree where a decision (question) is made. |
-| **Internal (decision) node** | A node that asks a question and routes observations to children. |
-| **Leaf (terminal node)** | A node with no children. It stores the final prediction. |
-| **Branch / edge** | The connection from a parent node to a child node. |
-| **Split** | The act of dividing a node's observations using one question. |
-| **Threshold** | The value $s$ in a question like "$X_j \le s$". |
-| **Feature** | The predictor $X_j$ that the question refers to. |
-| **Depth** | The number of splits from the root to a node (the root is depth 0). |
-| **Prediction** | The value (regression) or class (classification) stored at a leaf. |
+<a id="sec-1-5"></a>
+## 5. Why Are Decision Trees Different from Linear Models?
 
-Every split in an ordinary decision tree uses **one feature** and **one threshold**, written as
+### Why Are Decision Trees Different from Linear Models?
 
-$$X_j \le s$$
-
-observations going left when the statement is true and right when it is false. This is the **axis-aligned** split we keep returning to: it slices the feature space with a line parallel to one of the axes.
-
----
-
-## 5. The Conceptual Dependency Chain
-
-Before diving into formulas, it helps to see the full chain of ideas and why each one leads to the next. Each link answers "why do we need this next concept?"
+A linear model tries to learn **one mathematical relationship** that describes the whole dataset:
 
 ```
-Supervised Learning
-        ↓
-Regression / Classification
-        ↓
-Feature-Based Questions
-        ↓
-Splits
-        ↓
-Nodes and Leaves
-        ↓
-Regions of the Feature Space
-        ↓
-Impurity / Error
-        ↓
-Best Split
-        ↓
-Recursive Binary Splitting
-        ↓
-Decision Tree
-        ↓
-Tree Complexity
-        ↓
-Overfitting
-        ↓
-Stopping / Pruning
+y = β₀ + β₁x₁ + β₂x₂ + ...
 ```
 
-- **Supervised learning → Regression/Classification**: we have labeled data and a task (predict a number or a class).
-- **→ Feature-based questions**: instead of a formula, we'll ask yes/no questions about features.
-- **→ Splits → Nodes and Leaves**: each question splits the data; the tree is just a nesting of splits ending in leaves.
-- **→ Regions of the feature space**: the leaves correspond to disjoint regions that tile the space.
-- **→ Impurity/Error**: to choose between candidate splits we need a score measuring how "good" a group is (how mixed its classes are, or how much its values vary).
-- **→ Best split**: pick the split that most improves that score.
-- **→ Recursive binary splitting**: apply "best split" again inside each child until we stop.
-- **→ Decision tree**: the finished structure.
-- **→ Tree complexity → Overfitting**: a tree that keeps splitting becomes very complex and can overfit.
-- **→ Stopping/Pruning**: limit or trim complexity to restore generalization.
+One formula, applied everywhere. Every prediction comes out of the same equation.
 
-The rest of the chapter walks this chain from top to bottom.
-
----
-
-## 6. Intuition → Mathematics: Regions and Piecewise-Constant Prediction
-
-For the rest of the chapter, remember the central mental picture:
-
-> Instead of fitting one global regression equation, a tree divides the feature space into regions and assigns a constant prediction to each region.
-
-Suppose we have two features $X_1$ and $X_2$. A tree that asks "Is $X_1 \le t_1$?" and then "Is $X_2 \le t_2$?" inside the right branch produces four rectangular regions. Every observation in a given rectangle gets the same predicted value.
-
-This is the **piecewise-constant** nature of tree prediction: within each region $R_m$, the prediction is a constant $\hat c_m$, and across regions the prediction jumps abruptly at the region boundaries.
-
-### The Regression Tree Prediction
-
-The tree's prediction function can be written as
-
-$$\hat f(x) = \sum_{m=1}^{M} \hat c_m \, \mathbb{1}(x \in R_m)$$
-
-where:
-
-- $M$ is the number of **regions** (leaves).
-- $R_1, \dots, R_M$ are disjoint regions that partition the feature space.
-- $\hat c_m$ is the **constant prediction** assigned to region $R_m$.
-- $\mathbb{1}(\cdot)$ is the **indicator function**: it equals 1 if its argument is true and 0 otherwise.
-
-Read the formula: for a point $x$, exactly one indicator is 1 (the region containing $x$), so only that region's constant $\hat c_m$ contributes; the sum returns that constant.
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Regression trees and prediction via stratification of the feature space
-
----
-
-## 7. Regression Trees
-
-### The Intuition
-
-In linear regression we wrote $Y \approx \beta_0 + \beta_1 X_1 + \dots$ — one smooth function for all the data. A regression tree abandons smoothness. It cuts the predictor space into regions and predicts the **mean of the training responses in each region**.
-
-This leads to a prediction that looks like a **staircase**: flat within each region, jumping at region boundaries. This is called a **piecewise-constant** prediction.
-
-### Why the Leaf Prediction Is the Mean (Derivation)
-
-The region $R_m$ is assigned one constant $\hat c_m$ to be used for every point inside it. We choose it to minimize the sum of squared errors over the training observations in that region:
-
-$$\min_{c_m} \sum_{i \in R_m} (y_i - c_m)^2$$
-
-Treat this as the simple one-parameter regression problem we already know. The best constant (in squared error) is the value that minimizes $\sum_i (y_i - c)^2$. Setting the derivative with respect to $c$ to zero:
-
-$$\frac{d}{dc} \sum_{i \in R_m} (y_i - c)^2 = -2 \sum_{i \in R_m} (y_i - c) = 0$$
-
-$$\sum_{i \in R_m} y_i - |R_m| \, c = 0$$
-
-$$c = \frac{1}{|R_m|} \sum_{i \in R_m} y_i$$
-
-So the optimal leaf prediction is just the **mean** of the training responses in the region:
-
-$$\hat c_m = \frac{1}{|R_m|} \sum_{i: x_i \in R_m} y_i$$
-
-where $|R_m|$ is the number of training observations in region $R_m$.
-
-This is exactly the same least-squares principle as linear regression, except the "model" inside each region has no slope — it is a flat line at the local mean.
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Regression trees and leaf predictions
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Regression trees
-
----
-
-## 8. Finding the Best Regression Split
-
-We cannot consider every possible partition of the data (there are astronomically many). Instead, trees use a **recursive, greedy** procedure: at each node we consider each feature and each candidate threshold, and pick the single split that best reduces the error. We will derive the split criterion first with a tiny example, then write the mathematics.
-
-### Tiny Numerical Example
-
-Imagine one feature $X$ and a response $y$:
-
-| $i$ | $X$ | $y$ |
-|----|-----|-----|
-| 1 | 1 | 2 |
-| 2 | 2 | 3 |
-| 3 | 3 | 4 |
-| 4 | 4 | 10 |
-| 5 | 5 | 11 |
-| 6 | 6 | 12 |
-
-Notice the first three $y$-values are small and the last three are large. A good split should separate them. Candidate binary splits for a single feature use thresholds lying **between** consecutive sorted $X$ values:
+A decision tree works differently — it doesn't fit a global formula at all. It divides the feature space into regions using sequential decisions:
 
 ```
-X <= 1.5
-X <= 2.5
-X <= 3.5
-X <= 4.5
-X <= 5.5
+if x₁ > threshold:      → region A, predict c₁
+else:                   → region B, predict c₂
 ```
 
-For each split we form a left region $R_1$ and a right region $R_2$, compute each region's mean (its candidate leaf prediction), then compute each region's squared error, and add them.
+Inside each region, the tree uses a simple constant prediction. So instead of one smooth function covering everything, you get a **piecewise-constant** model: flat inside each region, jumping at the region boundaries.
 
-#### Split 1: $X \le 1.5$
+The core difference in one line:
 
-- $R_1 = \{1\}$, $y$-values $\{2\}$, mean $\hat c_1 = 2$.
-- $R_2 = \{2,3,4,5,6\}$, $y$-values $\{3,4,10,11,12\}$, mean $\hat c_2 = (3+4+10+11+12)/5 = 8$.
-- Left error: $(2-2)^2 = 0$.
-- Right error: $(3-8)^2+(4-8)^2+(10-8)^2+(11-8)^2+(12-8)^2 = 25+16+4+9+16 = 70$.
-- **Total = 70.**
+> Linear models learn one relationship across the whole feature space. Decision trees divide the feature space into regions, each with its own local rule.
 
-#### Split 2: $X \le 2.5$
+<a id="sec-1-6"></a>
+## 6. The Two Main Types of Decision Trees
 
-- $R_1 = \{1,2\}$, $y = \{2,3\}$, mean $2.5$.
-- $R_2 = \{3,4,5,6\}$, $y = \{4,10,11,12\}$, mean $(4+10+11+12)/4 = 9.25$.
-- Left error: $(2-2.5)^2+(3-2.5)^2 = 0.25+0.25 = 0.5$.
-- Right error: $(4-9.25)^2+(10-9.25)^2+(11-9.25)^2+(12-9.25)^2 = 27.5625+0.5625+3.0625+7.5625 = 38.75$.
-- **Total = 39.25.**
+Decision trees are mainly used for two supervised learning tasks:
 
-#### Split 3: $X \le 3.5$
-
-- $R_1 = \{1,2,3\}$, $y = \{2,3,4\}$, mean $3$.
-- $R_2 = \{4,5,6\}$, $y = \{10,11,12\}$, mean $11$.
-- Left error: $(2-3)^2+(3-3)^2+(4-3)^2 = 1+0+1 = 2$.
-- Right error: $(10-11)^2+(11-11)^2+(12-11)^2 = 1+0+1 = 2$.
-- **Total = 4.**
-
-(If we kept splitting, the child regions would each be nearly pure, and the tree would fit this data almost perfectly — this is precisely where overfitting begins.)
-
-#### Splits 4 and 5
-
-- $X \le 4.5$: $R_1 = \{1,2,3,4\}$ mean $(2+3+4+10)/4=4.75$ (error $38.75$); $R_2 = \{5,6\}$ mean $11.5$ (error $0.5$); total error **39.25**.
-- $X \le 5.5$: $R_1 = \{1,\dots,5\}$ mean $(2+3+4+10+11)/5=6$ (error $70$); $R_2=\{6\}$ mean $12$ (error $0$); total error **70**.
-
-#### Choosing the Best Split
-
-| Split | Total squared error |
-|-------|---------------------|
-| $X \le 1.5$ | 70.00 |
-| $X \le 2.5$ | 39.25 |
-| $X \le 3.5$ | **4.00** |
-| $X \le 4.5$ | 39.25 |
-| $X \le 5.5$ | 70.00 |
-
-The best split is **$X \le 3.5$**, because it gives the smallest total squared error. It succeeds by separating the low region $\{1,2,3\}$ from the high region $\{4,5,6\}$, exactly the structure we noted at the start.
-
-### The Mathematical Formulation
-
-The two regions produced by a split on feature $X_j$ at threshold $s$ are:
-
-$$R_1(j,s) = \{ X : X_j \le s \}, \qquad R_2(j,s) = \{ X : X_j > s \}$$
-
-The split we choose minimizes the total squared error over both regions:
-
-$$\sum_{i: x_i \in R_1} (y_i - \hat c_1)^2 + \sum_{i: x_i \in R_2} (y_i - \hat c_2)^2$$
-
-This equation is just the sum of the "left error" and "right error" columns we computed by hand. $\hat c_1$ and $\hat c_2$ are the means of each region, exactly as used above. The search is:
-
-> For each feature $X_j$ and each candidate threshold $s$ that lies between consecutive observed values, compute the total squared error, and keep the pair $(j, s)$ that minimizes it.
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Regression trees and split selection
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Regression trees
-
----
-
-## 9. Classification Trees
-
-### The Basic Problem
-
-> What should a leaf predict when the target is a class rather than a continuous number?
-
-For regression each leaf stores the mean of its $y$-values. For classification the leaf stores a **class**. But which class? The natural answer is the **majority class**: whichever class appears most often in that leaf's training observations.
-
-### Class Counts, Proportions, and Purity
-
-In a node, let $N$ be the number of observations and let $N_k$ be the count of class $k$. Then:
-
-- **Class count**: $N_k$, the number of class-$k$ observations in the node.
-- **Class proportion**: $p_k = N_k / N$, the fraction of class-$k$ observations.
-- **Majority class**: the class with the largest $p_k$; this is the node's prediction.
-- **Class probability**: the vector $(p_1, p_2, \dots, p_K)$; this is what `predict_proba` returns (the posterior probability estimate for each class).
-- **Pure node**: a node in which all observations belong to one class ($p_k = 1$ for some $k$).
-- **Impure node**: a node in which two or more classes are mixed.
-
-### Why Purity Matters
-
-Consider three nodes:
-
-```
-Node A:  10 Yes,  0 No
-Node B:   5 Yes,  5 No
-Node C:   8 Yes,  2 No
-```
-
-- **Node A is pure**: every observation is `Yes`. It is perfectly determined — no uncertainty, prediction `Yes` is always right in the training set.
-- **Node B is maximally mixed**: a fifty-fifty split. We have no basis to prefer one class; whichever we predict, half the observations disagree. This is maximum uncertainty.
-- **Node C is in between**: leaning `Yes`, but with some `No` noise.
-
-The model prefers to split in a way that makes the child nodes **purer** than the parent. Predicting `Yes` in Node A is easy; predicting in Node B is a coin-flip. The next sections give a number to "how mixed" a node is, so that we can compare candidate splits objectively.
-
----
-
-## 10. Gini Impurity From Zero
-
-> **How do we mathematically measure how mixed a node is?**
-
-We want a number $G$ that is:
-
-- $0$ when the node is pure (one $p_k = 1$, all others $0$),
-- high when the classes are evenly mixed,
-- increasing as the distribution spreads out across classes.
-
-### Deriving the Gini Impurity
-
-Consider what would happen if we randomly **classified** an observation in the node by drawing a class at random with probabilities $p_k$, and then evaluated whether that random label matches the observation's true class.
-
-- The probability the random draw is class $k$ is $p_k$.
-- The probability the observation actually belongs to class $k$ is $p_k$.
-- The probability of a **match** for class $k$ is $p_k \cdot p_k = p_k^2$.
-
-Summing over classes, the probability that a random draw matches the true class is $\sum_k p_k^2$. The Gini impurity is the probability of a **mismatch**:
-
-$$G = 1 - \sum_{k=1}^{K} p_k^2$$
-
-where:
-
-- $K$ is the number of classes,
-- $p_k$ is the proportion of class $k$ in the node,
-- $G = 0$ means the node is **pure** (no mismatch possible),
-- $G$ is largest when the classes are evenly spread (mismatch most likely).
-
-### Manual Calculations
-
-| Node | Counts | Proportions | Gini $G = 1 - \sum p_k^2$ |
-|------|--------|-------------|---------------------------|
-| A | 10 Yes, 0 No | $p = (1, 0)$ | $1 - (1^2 + 0^2) = 0$ |
-| B | 5 Yes, 5 No | $p = (0.5, 0.5)$ | $1 - (0.25 + 0.25) = 0.5$ |
-| C | 8 Yes, 2 No | $p = (0.8, 0.2)$ | $1 - (0.64 + 0.04) = 0.32$ |
-
-- **Node A: $G = 0$** — pure.
-- **Node B: $G = 0.5$** — the maximum for a binary problem (most mixed).
-- **Node C: $G = 0.32$** — moderately impure.
-
-For three classes, one fully mixed node with $p=(1/3,1/3,1/3)$ gives $G = 1 - 3 \cdot (1/9) = 2/3$.
-
-Gini is used to **score candidate splits**: a split is good if the *weighted* Gini of its children is much smaller than the Gini of the parent.
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Classification trees and node impurity
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Classification trees
-
----
-
-## 11. Entropy From Zero
-
-Gini measures "mixed-ness" directly through the mismatch probability. Entropy measures the same idea through **uncertainty**, and comes from information theory. We introduce it only now, after the notion of impurity is already clear.
-
-### What Entropy Measures
-
-Imagine a message that reveals the class of a randomly chosen observation. If the node is pure ($p=(1,0)$), the outcome is certain, and the message carries **no information** — uncertainty is zero. If the node is fifty-fifty, the outcome is maximally surprising, and the message carries **the most information**.
-
-Entropy quantifies this uncertainty:
-
-$$H = -\sum_{k=1}^{K} p_k \log(p_k)$$
-
-where the sum is over classes and $\log$ is (conventionally) base 2, so entropy is measured in bits (base $e$ differs only by a constant scale).
-
-### Why the Logarithm Appears
-
-Information theory defines the "surprise" or information content of an event with probability $p$ as $-\log p$. An event with probability $p=1$ (certain) carries $-\log 1 = 0$ information. An event with probability $p=0.5$ carries $-\log 0.5 = 1$ bit. The **expected** information of the class outcome is the average of $-\log p_k$ weighted by $p_k$:
-
-$$H = \sum_k p_k (-\log p_k) = -\sum_k p_k \log p_k$$
-
-So entropy is the **expected surprise** of observing the class label. When one class is certain, surprise is zero (a pure node has $H=0$). When classes are mixed, surprise grows; the maximum is at the uniform distribution (all $p_k$ equal).
-
-Note that by convention we take $0 \log 0 = 0$, since a class that never appears contributes no uncertainty.
-
-### Manual Calculations
-
-Using natural log for ease (the ordering is what matters):
-
-| Node | Proportions | Entropy $H = -\sum p_k \log p_k$ |
-|------|-------------|----------------------------------|
-| A | $p = (1, 0)$ | $-(1 \cdot 0 + 0 \cdot \log 0) = 0$ |
-| B | $p = (0.5, 0.5)$ | $-(0.5(-0.693) + 0.5(-0.693)) = 0.693$ |
-| C | $p = (0.8, 0.2)$ | $-(0.8(-0.223) + 0.2(-1.609)) = 0.500$ |
-
-- **Node A: $H = 0$** — pure, zero uncertainty.
-- **Node B: $H = 0.693$** — maximum for two classes ($\log 2$ in natural log).
-- **Node C: $H = 0.500$** — between.
-
-Observe the qualitative agreement with Gini: A < C < B in impurity. Gini and entropy are **different formulas with similar behavior**. They are not interchangeable terms; they are two competing measures of the same underlying idea.
-
-**Reference:**
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Classification trees
-
----
-
-## 12. Information Gain
-
-Splitting a node should reduce impurity. **Information gain** measures how much the impurity drops because of a candidate split.
-
-### Building the Concept
-
-```
-Parent node
-    ↓
-Candidate split
-    ↓
-Child nodes
-    ↓
-Weighted child impurity
-    ↓
-Impurity reduction
-```
-
-Concretely, for a parent whose impurity is $Q_\text{parent}$, a candidate split creates two children with impurities $Q_1$ and $Q_2$ and sizes $N_1$, $N_2$ (with $N_1 + N_2 = N$). The **weighted child impurity** is
-
-$$Q_\text{children} = \frac{N_1}{N} Q_1 + \frac{N_2}{N} Q_2$$
-
-which gives more weight to the larger child. The **information gain** is the reduction in impurity:
-
-$$\text{Gain} = Q_\text{parent} - Q_\text{children}$$
-
-When $Q$ is entropy, this is the classic **information gain** of decision-tree literature. When $Q$ is Gini impurity, the same "reduction" idea is used; some libraries call the Gini-based analog just the "impurity reduction" rather than "information gain." The mechanism is identical.
-
-### Distinguishing the Terms
-
-| Term | Meaning |
-|------|---------|
-| **Impurity** ($Q$) | A number measuring how mixed a node is (Gini or entropy). |
-| **Weighted child impurity** | The weighted average of child impurities, $\frac{N_1}{N}Q_1 + \frac{N_2}{N}Q_2$. |
-| **Impurity reduction / information gain** | The difference $Q_\text{parent} - Q_\text{children}$; larger is better. |
-
-Do not treat these as interchangeable. "Impurity" describes how mixed a node is; "information gain" describes how much a split *reduces* that mixture; and "weighted child impurity" is the intermediate quantity used to compute the gain.
-
----
-
-## 13. Choosing the Best Classification Split
-
-### The Weighted Impurity Criterion
-
-To compare candidate classification splits we use the **weighted child impurity**:
-
-$$Q = \frac{N_1}{N} Q_1 + \frac{N_2}{N} Q_2$$
-
-where:
-
-- $N$ is the number of observations at the parent,
-- $N_1, N_2$ are the numbers routed to each child ($N_1 + N_2 = N$),
-- $Q_1, Q_2$ are the children's impurity measures (Gini or entropy),
-- the weights $N_1/N, N_2/N$ ensure a large child's impurity matters more.
-
-A good split makes $Q$ **small** (children are purer and/or one child is tiny). Equivalently, since the parent's impurity is fixed, it makes the **gain** $Q_\text{parent} - Q$ large.
-
-### Numerical Demonstration
-
-Suppose the parent node has: **7 Yes, 3 No** (so $p = (0.7, 0.3)$, $G_\text{parent} = 1 - (0.49+0.09) = 0.42$).
-
-Consider a candidate split feature $X \le s$ that routes as follows:
-
-- **Left child**: 6 Yes, 1 No → $N_1=7$, $p=(6/7,1/7)$, $G_1 = 1 - (36/49 + 1/49) = 12/49 \approx 0.2449$.
-- **Right child**: 1 Yes, 2 No → $N_2=3$, $p=(1/3,2/3)$, $G_2 = 1 - (1/9+4/9) = 4/9 \approx 0.4444$.
-
-Weighted child impurity:
-
-$$Q = \frac{7}{10}(0.2449) + \frac{3}{10}(0.4444) = 0.1714 + 0.1333 = 0.3048$$
-
-Information gain (Gini reduction):
-
-$$\text{Gain} = 0.42 - 0.3048 = 0.1152$$
-
-The split reduced impurity from $0.42$ to $0.3048$, a gain of about $0.115$. Now compare several candidate splits the same way and pick the one with the smallest $Q$ (largest gain).
-
-For every candidate split the procedure is identical:
-
-1. Split the data into left and right.
-2. Compute each child's class proportions.
-3. Compute each child's impurity (Gini or entropy).
-4. Weight the child impurities by their sizes.
-5. Sum to get the split score $Q$.
-6. Compare across all features and thresholds.
-7. Select the split with the smallest $Q$.
-
-After this process is clear, the code in Section 19 implements exactly these steps.
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Classification trees and impurity reduction
-
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Classification trees
-
----
-
-## 14. Recursive Binary Splitting and Greedy Optimization
-
-### Recursion in One Paragraph
-
-A **recursive function** is one that calls itself. It has two parts:
-
-- a **base case** (a condition under which it returns an answer immediately, without recursing),
-- a **recursive case** (where it calls itself on a smaller version of the problem).
-
-For example, a function that counts down from $n$ prints $n$ and calls itself with $n-1$, stopping when $n = 0$ (the base case).
-
-### Connecting Recursion to Trees
-
-A decision tree is built by a recursive function that, at each node, either returns a leaf (base case) or picks a split and calls itself on the left and right halves:
-
-```text
-build_tree(data)
-    if stopping_condition(data): return leaf(data)
-    (feature, threshold) = best_split(data)
-    left, right = split(data, feature, threshold)
-    return node(feature, threshold,
-                build_tree(left),   # recursive case
-                build_tree(right))
-```
-
-This is why the method is called **recursive binary splitting**: we take the data, split it into two, and repeatedly split each piece the same way.
-
-### Why It Is Greedy
-
-The full decision-tree optimization problem — find the tree (with any number of splits, in any order) that best predicts — is intractable to solve exactly. Trees therefore use a **greedy** algorithm:
-
-> It chooses the best split available at the current node rather than searching through every possible complete tree to guarantee a globally optimal tree.
-
-At each node the algorithm looks only at that node's data and picks the locally best split. It never looks ahead to see whether a locally second-best split would lead to a better overall tree. This is the same idea as other greedy algorithms: make the best immediate choice and move on. The result is a good tree, not an optimal one. This distinguishes tree construction from closed-form or convex-optimization methods used by linear and logistic regression, which *do* reach a global optimum.
-
----
-
-## 15. The Full Tree-Building Algorithm
-
-### Regression
-
-```text
-Start with all observations
-        ↓
-Check stopping conditions
-        ↓
-Search features
-        ↓
-Search thresholds
-        ↓
-Calculate split error (squared error of both children)
-        ↓
-Choose best split (smallest total error)
-        ↓
-Split data
-        ↓
-Recursively build children
-        ↓
-Create leaves (store each region's mean)
-```
+1. **Decision Tree Classification**
+2. **Decision Tree Regression**
 
 ### Classification
 
-```text
-Start with all observations
-        ↓
-Check stopping conditions
-        ↓
-Search features
-        ↓
-Search thresholds
-        ↓
-Calculate impurity of both children (Gini or entropy)
-        ↓
-Choose best split (smallest weighted child impurity / largest gain)
-        ↓
-Split data
-        ↓
-Recursively build children
-        ↓
-Create leaves (store majority class and class proportions)
-```
+The target is a **categorical value** — a class.
 
-### Pseudocode (shared structure)
+Examples:
 
-```text
-function BUILD(data, depth):
-    if node_count(depth) > max_depth
-       or len(data) < min_samples_split
-       or data is pure:
-        return LEAF(prediction from data)
+- Spam / Not Spam
+- Disease / No Disease
+- Cat / Dog
+- Customer will buy / won't buy
 
-    best = null
-    for each feature j:
-        values = sort(unique values of data[:, j])
-        for each pair of consecutive values (v_k, v_{k+1}):
-            s = (v_k + v_{k+1}) / 2            # candidate midpoint threshold
-            score = split_score(data, j, s)    # error or weighted impurity
-            if best is null or score < best.score:
-                best = (j, s, score)
+The leaf produces a **class prediction**.
 
-    (j, s) = feature/threshold of best
-    left  = BUILD(row_i where x_ij <= s, depth+1)
-    right = BUILD(row_i where x_ij >  s, depth+1)
-    return NODE(j, s, left, right)
-```
+### Regression
 
-Candidate thresholds are **midpoints between consecutive distinct feature values** (after sorting), exactly as in the manual example of Section 8 and in the implementation of Section 19. The algorithm does not test every raw value as a threshold; it tests one midpoint between each pair of neighbouring distinct values per feature.
+The target is a **continuous numerical value**.
 
-This is the algorithmic heart of the chapter. Sections 7-13 explained *which score is used* (squared error for regression, weighted impurity for classification); Sections 15-17 explain *when to stop*.
+Examples:
+
+- House price
+- Temperature
+- Salary
+- Stock return
+
+The leaf produces a **numerical prediction**.
+
+The distinction is simple:
+
+> **Classification → predicts a class/category.**
+> **Regression → predicts a number.**
+
+Everything else — the questions, the splits, the tree structure — is shared between the two. Only the split score and the leaf prediction change.
 
 ---
 
-## 16. Stopping Criteria
+<a id="part-2"></a>
+# Part 2 — Decision Tree Classification & Information Theory
 
-> Why can't a tree simply split forever?
+<a id="sec-2-1"></a>
+## 1. What a Classification Tree Predicts
 
-A tree can always split until each leaf contains identical training values, at which point it has zero training error. But as we saw in the regression example (Section 8), further splits essentially memorize individual points. That is overfitting, so we stop splitting under certain conditions.
+A classification tree answers questions like "will this customer buy?" or "is this email spam?" — and its final answer is a **class label**.
 
-### The Stopping Conditions
+Remember our buy/income tree from Part 1:
 
-| Criterion | What it controls |
-|-----------|------------------|
-| **Maximum depth** (`max_depth`) | The deepest the tree is allowed to grow; depth 0 is a single leaf. |
-| **Minimum samples for a split** (`min_samples_split`) | A node must contain at least this many samples before it is allowed to split. |
-| **Minimum samples in a leaf** (`min_samples_leaf`) | A split is rejected if it would create a child with fewer than this many samples. |
-| **Maximum number of leaves** (`max_leaf_nodes`) | Stop when the tree has this many leaves already. |
-| **No useful split** | If no split reduces the score, stop (the best score equals the parent's score). |
-| **Pure node** | If all observations share one class (classification), no split can help; make a leaf. |
-
-### Effect on Tree Behavior
-
-| Change | Tree size | Bias | Variance | Overfitting | Underfitting |
-|--------|-----------|------|----------|-------------|--------------|
-| More restrictive stopping (smaller depth, larger min samples) | Smaller | Higher | Lower | Less | More |
-| Less restrictive stopping (deeper, smaller min samples) | Larger | Lower | Higher | More | Less |
-
-- A **very shallow** tree (e.g. depth 1, a single question) cannot capture the structure, so it underfits: high bias.
-- A **very deep** tree fits the training data almost exactly, so it overfits: high variance.
-
-The right stopping point balances bias against variance — exactly the bias-variance tradeoff studied earlier (ISL, Section 2.2.2). The hyperparameters listed here *are* the knobs that tune this tradeoff.
-
----
-
-## 17. Overfitting and the Bias-Variance Tradeoff
-
-### Why Trees Overfit Easily
-
-Decision trees are notoriously prone to overfitting because a tree can be grown deep enough to memorize the training set:
-
-```text
-Shallow tree
-→ simpler model
-→ higher bias
-→ lower variance
-
-Deep tree
-→ complex model
-→ lower training error
-→ higher variance
-→ potential overfitting
+```
+                Is Age > 30?
+               /            \
+             Yes              No
+             /                  \
+    Income > 50K?              Don't Buy
+      /        \
+    Yes         No
+    /            \
+  Buy        Don't Buy
 ```
 
-With enough splits, every training observation can end up in its own leaf. Training error then drops to (almost) zero, because each training point is essentially its own "region". But on unseen data these tiny regions predict poorly: they encode noise, not signal. This is the familiar story of a model with near-zero training error and high test error.
+The leaves hold the predictions: `Buy` or `Don't Buy`. Every data point that lands in a leaf gets that leaf's class.
 
-### Connecting to the Existing Bias-Variance Material
+But a classification tree can give you more than a class. It can also tell you **how confident** it is — that's the class probability.
 
-In the earlier regression chapter we decomposed test error as
+<a id="sec-2-2"></a>
+## 2. Majority Class and Class Probabilities
 
-$$\text{Test Error} = \text{Bias}^2 + \text{Variance} + \text{Irreducible Error}$$
+Where does a leaf's prediction come from? From the **training data** that landed in that leaf during training.
 
-Trees illustrate this sharply. A deep tree has low bias (it fits the training structure well) but very high variance (small changes in the training data produce very different trees). A shallow tree has lower variance but higher bias. This is why tree performance on unseen data is governed by controlling complexity, either by stopping early (Section 16) or by pruning (Section 18), and why ensemble methods (Section 29) average many trees to reduce variance.
+Say a leaf ends up with 10 training customers: 8 bought, 2 didn't.
 
-**Reference:**
+- The **majority class** is `Buy` — that's the leaf's prediction.
+- The **class proportions** are: 80% Buy, 20% Don't Buy — that's the leaf's class probability.
 
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Tree pruning and complexity control
+So a leaf stores both:
 
----
+| Leaf content | Meaning |
+|---|---|
+| Majority class | The prediction (`Buy`) |
+| Class proportions | The confidence behind it (80% Buy, 20% Don't Buy) |
 
-## 18. Pruning
+When you ask the tree to predict a new customer, it returns `Buy`. When you ask for probabilities, it returns `[0.8 Buy, 0.2 Don't Buy]`.
 
-Stopping early is one way to control complexity. **Pruning** is the alternative: grow a full tree first, then remove unnecessary branches.
+> In scikit-learn terms: `predict()` gives you the class, `predict_proba()` gives you the probabilities.
 
-> A fully grown tree may describe noise in the training data. Pruning removes unnecessary branches to obtain a simpler subtree.
+The general rule: with $N$ observations in a leaf and $N_k$ of class $k$, the class proportion is
 
-### Key Terms
+$$p_k = \frac{N_k}{N}$$
 
-- **Fully grown tree**: a tree grown until every leaf is pure or otherwise minimal.
-- **Subtree**: any tree obtained by removing branches from a larger tree.
-- **Complexity**: loosely, the size of the tree, usually measured by the number of leaves $|T|$.
-- **Pruning**: removing branches to trade a little training fit for a simpler, better-generalizing tree.
-- **Validation**: pruning decisions are made by checking how candidate subtrees perform on held-out data or a complexity penalty, not just on training data.
+which is both the probability estimate and the basis for the majority-class prediction.
 
-### Cost-Complexity Pruning
+<a id="sec-2-3"></a>
+## 3. Pure vs. Impure Nodes
 
-We need a principled way to decide which branches to remove. **Cost-complexity pruning** adds a penalty for tree size to the training error:
+Now think about what makes a leaf *good*. Compare three nodes with classes `Yes` and `No`:
 
-$$R_\alpha(T) = R(T) + \alpha |T|$$
-
-where:
-
-- $T$ is a subtree (tree),
-- $R(T)$ is the training error of $T$ (RSS for regression; misclassification/impurity measure for classification),
-- $|T|$ is the number of leaves (terminal nodes) in $T$ — its complexity,
-- $\alpha \ge 0$ is a tuning parameter controlling the penalty for complexity.
-
-The goal is to find the subtree $T$ that minimizes $R_\alpha(T)$. As $\alpha$ increases, larger trees are penalized more heavily, so the optimal $T$ becomes smaller:
-
-```text
-Small α
-→ complexity is weakly penalized
-→ larger tree
-
-Large α
-→ complexity is strongly penalized
-→ smaller tree
+```
+Node A:  10 Yes,  0 No      → pure
+Node B:   5 Yes,  5 No      → maximally mixed
+Node C:   8 Yes,  2 No      → leaning
 ```
 
-- When $\alpha = 0$, $R_\alpha(T) = R(T)$, and a fully grown tree minimizes it (no penalty).
-- As $\alpha \to \infty$, the best tree shrinks toward a single leaf (the penalty makes any split not worth its added leaf).
+- **Node A is pure.** Every training point is `Yes`. The prediction is obvious and confident.
+- **Node B is maximally mixed.** Fifty-fifty. Whatever we predict, half the points disagree. This is a coin flip.
+- **Node C is in between.** Leaning `Yes`, but with some noise.
 
-### Pruning vs. Early Stopping
+The pattern is intuitive: **a node that is pure makes easy, confident predictions; a node that is mixed makes coin-flip predictions.**
 
-Pruning and early stopping are **related but not identical**:
+That's why the tree wants to split in a way that makes the child nodes **purer than the parent**. And to do that, it needs a way to answer one central question.
 
-- **Early stopping** prevents the tree from growing beyond a point during construction (set `max_depth`, `min_samples_split`, etc.). It makes a decision *before* the deep branches exist.
-- **Pruning** grows the tree fully first, then removes branches *after* construction, using a validation criterion or a cost-complexity penalty.
+<a id="sec-2-4"></a>
+## 4. The Central Problem: Which Question Should the Tree Ask?
 
-Both control complexity and both fight overfitting, but they operate at different times and with different information (pruning can see the fully grown tree and the effect of removing a specific branch). This is captured in scikit-learn by `ccp_alpha` (cost-complexity pruning) standing alongside the early-stopping parameters.
+At every node, the tree faces many candidate questions — one feature, many possible thresholds.
 
-**Reference:**
+```
+Is Age > 20?   Is Age > 30?   Is Age > 40?   ...
+Is Income > 30K?   Is Income > 50K?   Is Income > 70K?   ...
+```
 
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Tree pruning and cost-complexity control
+Which one should it ask? We can't tell by looking — we need a **number** that measures how mixed a node is, so we can compare questions objectively.
 
-> Book: ESL  
-> Chapter: 10 - Additive Models, Trees, and Related Methods  
-> Topic: Cost-complexity pruning
+> We need a score: "how mixed is this node?"
+
+A good split turns a mixed parent into purer children. A bad split leaves everything as mixed as before. Once we have a number for "mixedness", the strategy is simple: try every candidate question, score the children it produces, and keep the question that leaves the children the purest.
+
+That number — the impurity — comes straight from **information theory**. So before defining it, let's understand the idea it's built on.
+
+<a id="sec-2-5"></a>
+## 5. Information Theory: Measuring Uncertainty
+
+### What "information" actually means
+
+In everyday language, "information" is just facts or data. In information theory, it means something specific: **information is the reduction of uncertainty**. An event carries information when it surprises you — when you couldn't have predicted it.
+
+Two examples:
+
+- "The coin landed heads." — You knew it was 50/50. Mildly informative.
+- "The coin landed on its edge." — That's extremely unlikely. Highly informative.
+
+The rarer the event, the more information it carries. This is the key idea:
+
+> The surprise of an event depends on how probable it was. Certain events carry zero information. Rare events carry a lot.
+
+### Measuring information in bits
+
+We measure information in **bits** — the number of yes/no questions you'd need to answer to figure something out.
+
+- One fair coin flip: 1 bit. One yes/no question tells you the outcome.
+- A roll of a fair 6-sided die: about 2.6 bits. You'd need between 2 and 3 yes/no questions to pin down the result — some outcomes need 2 questions, some need 3.
+
+The connection: an event with probability $p$ carries roughly $\log_2(1/p)$ bits of surprise. A certain event ($p = 1$) carries $\log_2(1) = 0$ bits — no surprise at all. A fair coin flip ($p = 0.5$) carries $\log_2(2) = 1$ bit.
+
+### Expected surprise: how uncertain are we on average?
+
+Knowing the surprise of one event isn't enough — we want the **average surprise** of a whole situation: for each possible outcome, take its surprise and weight it by how likely it is.
+
+Consider two coins:
+
+- **Fair coin (50/50):** every outcome surprises us a full bit. Expected surprise ≈ 1 bit. Always uncertain.
+- **Loaded coin (90% heads):** most of the time (90%) the result is heads — no surprise, 0 bits. Rarely (10%) it's tails — a big surprise. Expected surprise is small, because the predictable case dominates.
+
+The intuition:
+
+> The more mixed the situation, the higher the expected surprise. The more predictable, the lower it is.
+
+That's precisely what we need for trees: a pure node has zero expected surprise. A fifty-fifty node has maximum expected surprise. A leaning node sits in between.
+
+### Why information theory matters for decision trees
+
+Here's the payoff. A **node** is just a situation with class probabilities — like a coin with multiple sides. Its "mixedness" *is* its expected surprise.
+
+- Pure node → no surprise → prediction is certain.
+- Mixed node → lots of surprise → prediction is a coin flip.
+
+And when the tree splits a node into children, the children are (hopefully) less mixed — the class label becomes **less surprising**. The amount of surprise the split removed is literally the **information it gained**.
+
+That's where the name "information gain" comes from, and it's exactly what we'll make precise next.
 
 ---
 
-## 19. NumPy Implementation From Scratch
+<a id="part-3"></a>
+# Part 3 — Entropy, Gini Impurity, and Information Gain
 
-Only now, with all the theory in place, do we implement the algorithm. The implementation is deliberately educational: the logic is visible in plain loops, and every step maps to a formula from earlier sections.
+In Part 2 we ended with the problem: the tree needs a **number** that measures how mixed a node is. Here it is — two standard measures, plus the split-scoring idea built on top of them: information gain.
 
-### 19.1 Impurity and Error Helpers
+<a id="sec-3-1"></a>
+## 1. Entropy: The Expected Surprise, Made Concrete
+
+In Part 2 we said "expected surprise". Entropy is exactly that, written as a formula:
+
+$$H = -\sum_{k=1}^{K} p_k \log_2(p_k)$$
+
+Where:
+
+- $K$ — number of classes
+- $p_k$ — proportion of class $k$ in the node ($\sum p_k = 1$)
+- $\log_2$ — base-2 logarithm (so the result is in **bits**)
+- the **minus sign** — needed because $\log_2(p_k)$ is negative for $p_k < 1$
+
+The convention $0 \log 0 = 0$ applies: a class that never appears contributes no uncertainty.
+
+Reading the formula: for each class, take its surprise $\log_2(1/p_k)$, and weight it by how likely that class is ($p_k$). Sum it up. That's the **average surprise** of the node.
+
+### Calculating entropy by hand
+
+Let's use the nodes from Part 2 and compute. Useful values: $\log_2(0.5) = -1$, $\log_2(0.8) \approx -0.32$, $\log_2(0.2) \approx -2.32$.
+
+**Node A — pure:** $p = (1, 0)$
+
+$$H = -(1 \cdot \log_2 1 + 0 \cdot \log_2 0) = -(0 + 0) = 0 \text{ bits}$$
+
+No surprise at all — the class is certain.
+
+**Node B — fifty-fifty:** $p = (0.5, 0.5)$
+
+$$H = -\big(0.5(-1) + 0.5(-1)\big) = 1 \text{ bit}$$
+
+Maximum uncertainty. A coin flip.
+
+**Node C — leaning:** $p = (0.8, 0.2)$
+
+$$H = -\big(0.8(-0.32) + 0.2(-2.32)\big) = 0.26 + 0.46 = 0.72 \text{ bits}$$
+
+**90/10 node:** $p = (0.9, 0.1)$
+
+$$H = -\big(0.9(-0.15) + 0.1(-3.32)\big) = 0.14 + 0.33 = 0.47 \text{ bits}$$
+
+| Node | Proportions | Entropy (bits) |
+|------|-------------|----------------|
+| A | $p = (1, 0)$ | 0.00 |
+| B | $p = (0.5, 0.5)$ | 1.00 |
+| C | $p = (0.8, 0.2)$ | 0.72 |
+| 90/10 | $p = (0.9, 0.1)$ | 0.47 |
+
+Exactly the ordering our intuition predicted: pure → 0, evenly mixed → maximum, leaning → in between.
+
+### The maximum
+
+Entropy reaches its largest value when all classes are equally likely, $p_k = 1/K$:
+
+$$H_\text{max} = \log_2 K$$
+
+For two classes that's $\log_2 2 = 1$ bit. For three classes, $\log_2 3 \approx 1.585$ bits.
+
+One practical note: the formula works with any logarithm base. Base 2 gives bits, base $e$ gives nats — they only differ by a constant factor, so **the choice of base never changes which split wins**. Code (including scikit-learn) often uses natural logs; the trees come out identical.
+
+<a id="sec-3-2"></a>
+## 2. Gini Impurity: The Misclassification Story
+
+Gini impurity measures the same "how mixed" idea, but through a different story. Instead of surprise, it uses the **probability of a wrong random guess**.
+
+Imagine you're in a node and you guess the class of a random observation by drawing a class at random, with the same probabilities as the node:
+
+- The chance you draw class $k$ is $p_k$.
+- The chance the observation really is class $k$ is also $p_k$.
+- The chance the draw matches the truth for class $k$ is $p_k \cdot p_k = p_k^2$.
+- Overall, the chance of a match is $\sum_k p_k^2$.
+
+Gini impurity is the chance of a **mismatch**:
+
+$$G = 1 - \sum_{k=1}^{K} p_k^2$$
+
+An equivalent form, $G = \sum_k p_k(1 - p_k)$, says the same thing: for each class, $p_k$ is the chance you draw it and $1 - p_k$ is the chance the observation isn't it.
+
+### Calculating Gini by hand
+
+Same nodes as before.
+
+**Node A — pure:** $p = (1, 0)$ → $G = 1 - (1^2 + 0^2) = 0$
+
+**Node B — fifty-fifty:** $p = (0.5, 0.5)$ → $G = 1 - (0.25 + 0.25) = 0.5$
+
+**Node C — leaning:** $p = (0.8, 0.2)$ → $G = 1 - (0.64 + 0.04) = 0.32$
+
+**90/10 node:** $p = (0.9, 0.1)$ → $G = 1 - (0.81 + 0.01) = 0.18$
+
+The maximum for $K$ classes, at the uniform distribution:
+
+$$G_\text{max} = 1 - \frac{1}{K}$$
+
+For two classes: $1/2$. For three: $2/3$.
+
+<a id="sec-3-3"></a>
+## 3. Entropy vs. Gini
+
+Same nodes, both scores:
+
+| Node | Proportions | Entropy (bits) | Gini |
+|------|-------------|----------------|------|
+| A | $p = (1, 0)$ | 0.00 | 0.00 |
+| B | $p = (0.5, 0.5)$ | 1.00 | 0.50 |
+| C | $p = (0.8, 0.2)$ | 0.72 | 0.32 |
+| 90/10 | $p = (0.9, 0.1)$ | 0.47 | 0.18 |
+
+They agree on the ranking — different formulas, same behavior. In practice:
+
+- Both usually pick very similar splits.
+- Gini tends to favor splits that push the majority proportion up faster.
+- There's no strong theoretical argument for one over the other. Most problems: pick either, the trees come out close.
+
+The same comparison, across every possible mix of two classes:
+
+<a id="figure-1"></a>
+![Gini impurity and entropy curves](../plots/01_impurity_gini_entropy.png)
+*Figure 1 — Gini impurity and entropy for a two-class node as $p_1$ moves from 0 to 1. Both peak at the 50/50 mix and hit zero at a pure node.*
+
+---
+<a id="sec-3-4"></a>
+## 4. Weighted Child Impurity
+
+Now the split part. A split produces **two children**, each with its own impurity. The tree needs to combine them into **one number**.
+
+The obvious idea — a plain average — is wrong. Why? **A child with more samples should matter more.** A split that puts 90 samples in a pure left child and 10 in a messy right child is mostly good; the messy child shouldn't count as much as the clean one.
+
+So the tree weights each child by its share of the parent's samples:
+
+$$Q_\text{children} = \frac{N_1}{N} Q_1 + \frac{N_2}{N} Q_2$$
+
+Where $N$ is the parent's sample count, $N_1, N_2$ the children's, and $Q_1, Q_2$ their impurities.
+
+### Worked example
+
+Parent: 10 samples, 5 `Yes` 5 `No` → entropy $H_\text{parent} = 1$ bit.
+
+A candidate split produces:
+
+- **Left child:** 3 `Yes`, 3 `No` → $N_1 = 6$, $Q_1 = 1$ bit
+- **Right child:** 4 `Yes`, 0 `No` → $N_2 = 4$, $Q_2 = 0$ (pure)
+
+**Plain average (wrong):** $(1 + 0)/2 = 0.5$ — ignores that the left child holds most of the data.
+
+**Weighted (what the tree uses):**
+
+$$Q_\text{children} = \frac{6}{10}(1) + \frac{4}{10}(0) = 0.6$$
+
+Higher than the plain average — correctly, since the larger, still-mixed child dominates.
+
+<a id="sec-3-5"></a>
+## 5. Information Gain
+
+Now we can finally score a split. A split is good when its children are clearly purer than the parent. **Information gain is the difference**:
+
+$$\text{Gain} = Q_\text{parent} - Q_\text{children} = Q_\text{parent} - \left(\frac{N_1}{N} Q_1 + \frac{N_2}{N} Q_2\right)$$
+
+- With entropy, this is the classic **information gain**, in bits.
+- With Gini, it's the same idea under a different name ("impurity reduction"). The mechanism is identical.
+
+What it means in plain words: how much "mixedness" the split removed. Bigger gain → better split.
+
+It's also exactly what the name suggests, tying back to Part 2: splitting reduces the surprise of the class label, and the amount removed is the information the split conveys about the class.
+
+Two useful facts:
+
+- **Gain is never negative.** Splitting can't make things more mixed. (Mathematically: entropy and Gini are concave, and a weighted average of concave functions never exceeds the function at the weighted average — that's Jensen's inequality.) A "useless" split has gain $= 0$, not negative.
+- **The strategy:** try every candidate question, compute its gain, keep the largest.
+
+### Worked example: scoring a split with Gini
+
+Parent: **7 `Yes`, 3 `No`** → $p = (0.7, 0.3)$
+
+$$G_\text{parent} = 1 - (0.49 + 0.09) = 0.42$$
+
+A candidate split $X \le s$ routes the data:
+
+- **Left child:** 6 `Yes`, 1 `No` → $p = (6/7, 1/7)$
+
+$$G_1 = 1 - \left(\frac{36}{49} + \frac{1}{49}\right) = \frac{12}{49} \approx 0.2449$$
+
+- **Right child:** 1 `Yes`, 2 `No` → $p = (1/3, 2/3)$
+
+$$G_2 = 1 - \left(\frac{1}{9} + \frac{4}{9}\right) = \frac{4}{9} \approx 0.4444$$
+
+**Weighted child impurity:**
+
+$$Q_\text{children} = \frac{7}{10}(0.2449) + \frac{3}{10}(0.4444) = 0.1714 + 0.1333 = 0.3048$$
+
+**Information gain:**
+
+$$\text{Gain} = 0.42 - 0.3048 = 0.1152$$
+
+The split reduced impurity from 0.42 to about 0.30 — a gain of ~0.115. With entropy instead of Gini the conclusion is the same (parent $H \approx 0.881$ bits, weighted children $\approx 0.690$ bits, gain $\approx 0.191$ bits).
+
+### Comparing two candidate splits
+
+Reuse the parent from Section 4: 10 samples, 5 `Yes` 5 `No`, $H_\text{parent} = 1$ bit.
+
+**Split 1** (from Section 4): left 6 samples ($Q_1 = 1$), right 4 samples ($Q_2 = 0$).
+
+$$Q_\text{children} = 0.6, \qquad \text{Gain} = 1 - 0.6 = 0.4 \text{ bits}$$
+
+**Split 2** (a poorer split): left 5 samples (4 `Yes`, 1 `No`), right 5 samples (1 `Yes`, 4 `No`). Each child is $p = (0.8, 0.2)$, entropy $0.72$ bits.
+
+$$Q_\text{children} = \frac{5}{10}(0.72) + \frac{5}{10}(0.72) = 0.72, \qquad \text{Gain} = 1 - 0.72 = 0.28 \text{ bits}$$
+
+Split 1 wins: 0.4 > 0.28. That comparison — score every candidate question, keep the one with the largest gain — is exactly what the tree does at every node.
+
+---
+
+<a id="part-4"></a>
+# Part 4 — Building the Tree
+
+We have the scoring machinery from Part 3. Now the real question: how does the tree actually get built? This part covers the algorithm, then shows the actual Python code from the repo and follows it by hand on one example.
+
+<a id="sec-4-1"></a>
+## 1. The Strategy: Recursive Binary Splitting
+
+The tree is built by one idea repeated: **split the data into two, then split each piece again, and keep going**. Each piece is handled exactly like the whole — that's recursion.
+
+```
+build_tree(data):
+    if data should stop:      → make a leaf
+    find the best split       → (feature, threshold) with largest gain
+    split data into left, right
+    build_tree(left)          → recursive call
+    build_tree(right)         → recursive call
+```
+
+Concretely, the tree starts with the root holding everything. It asks: "what single question gives the largest gain?" It splits on that question, and then **each child repeats the same process on its own data**. Children become leaves when they're told to stop.
+
+This is why it's called **recursive binary splitting**: every split is binary (two children), and the splitting is applied recursively.
+
+<a id="sec-4-2"></a>
+## 2. Why It's Greedy
+
+Here's an honest limitation: the tree **doesn't search for the best possible overall tree**. That problem — find the optimal tree over all possible split sequences — is computationally intractable in practice.
+
+Instead, the tree is **greedy**: at each node it picks the single best split *for that node's data*, with no lookahead.
+
+> The tree chooses the best split available at the current node, even if a slightly worse split now would lead to a better tree later.
+
+Is that a problem? Sometimes. But it's the standard approach used by every major library, and it works well in practice. Worth remembering: the result is a *good* tree, not necessarily the *optimal* one.
+
+<a id="sec-4-3"></a>
+## 3. Searching for the Best Split
+
+To find the best split at a node, the tree checks **every feature and every candidate threshold**:
+
+```
+for each feature j:
+    for each threshold s (between consecutive values of feature j):
+        split the node's data on "X_j <= s"
+        compute the weighted child impurity (Part 3)
+        remember the best (j, s) so far
+```
+
+Two details worth noting:
+
+- **Candidate thresholds** are the midpoints between consecutive distinct values of the feature. With values $1, 2, 3, 4, 5, 6$, the tree tries $1.5, 2.5, 3.5, 4.5, 5.5$. (Splitting at $2$ instead of $2.5$ gives the exact same partition — both send $1$ and $2$ left.)
+- **The best split** is the one with the smallest weighted child impurity — equivalently, the largest information gain. The parent's impurity is fixed, so minimizing $Q_\text{children}$ and maximizing gain are the same thing.
+
+The tree then splits the data, and each child runs this same search on its own slice of the data. Repeat until a stopping condition says stop.
+
+---
+<a id="sec-4-4"></a>
+## 4. The Tree in Python — One Example From the Code
+
+This is the actual logic from the repo's `05_decision_tree_classifier.py`, trimmed to its core. Read it once, then we'll follow it by hand on a tiny dataset.
+
+### The code
 
 ```python
 import numpy as np
 
-def mean_squared_leaf(y):
-    """Leaf prediction minimizes squared error -> the mean."""
-    return np.mean(y)
-
-def squared_error(y):
-    mu = np.mean(y)
-    return np.sum((y - mu) ** 2)
-
 def gini(probs):
-    """Gini impurity: 1 - sum(p_k^2)."""
-    return 1.0 - np.sum(probs ** 2)
+    return 1.0 - np.sum(probs ** 2)                    # Part 3 formula
 
-def entropy(probs):
-    """Entropy: -sum(p_k log p_k). 0*log(0) = 0."""
-    probs = probs[probs > 0]
-    return -np.sum(probs * np.log(probs))
+def weighted_impurity(left_y, right_y, n, n_classes):
+    c1 = np.bincount(left_y, minlength=n_classes)      # class counts in left child
+    c2 = np.bincount(right_y, minlength=n_classes)     # class counts in right child
+    i1 = gini(c1 / c1.sum())                           # impurity of each child
+    i2 = gini(c2 / c2.sum())
+    return (len(left_y) / n) * i1 + (len(right_y) / n) * i2   # weighted (Part 3)
 
-def class_proportions(y, n_classes):
-    counts = np.bincount(y, minlength=n_classes)
-    return counts / counts.sum()
-```
-
-`class_proportions` returns the vector $p = (p_1, \dots, p_K)$, which `gini` and `entropy` consume, mirroring Sections 10 and 11.
-
-### 19.2 Best Split Search
-
-The core is finding the feature and threshold that minimize the split score. For regression the score is the total squared error (Section 8); for classification it is the weighted child impurity (Section 13).
-
-```python
-def best_regression_split(X, y):
+def best_split(X, y, n_classes):
     n_samples, n_features = X.shape
-    best_err = np.inf
+    best_Q = np.inf
     best = None
-    parent_err = squared_error(y)
-
-    for j in range(n_features):
+    for j in range(n_features):                        # 1. every feature
         values = np.sort(np.unique(X[:, j]))
-        for k in range(1, len(values)):
-            s = (values[k - 1] + values[k]) / 2.0     # threshold between values
-            left  = y[X[:, j] <= s]
+        for k in range(1, len(values)):                # 2. every midpoint threshold
+            s = (values[k - 1] + values[k]) / 2.0
+            left  = y[X[:, j] <= s]                    # 3. split the classes
             right = y[X[:, j] >  s]
-            total = squared_error(left) + squared_error(right)
-            if total < best_err:
-                best_err, best = total, (j, s)
-    return best, best_err
-```
+            Q = weighted_impurity(left, right, n_samples, n_classes)
+            if Q < best_Q:                             # 4. keep the best
+                best_Q = Q
+                best = (j, s)
+    return best                                        # (feature, threshold)
 
-Candidate thresholds are placed **midway between consecutive distinct feature values** — exactly the "between values" idea used in the manual regression walkthrough (Section 8). The classification version is analogous, using `gini`/`entropy` and weighting child impurities by sample counts.
-
-### 19.3 Node and the Recursive Builder
-
-```python
-def build_tree(X, y, depth, max_depth, min_samples_split):
+def build_tree(X, y, depth, max_depth, min_samples_split, n_classes):
     n = len(y)
-
-    # stopping conditions
+    # STOP: too deep, too few samples, or already pure → make a leaf
     if depth >= max_depth or n < min_samples_split or len(np.unique(y)) == 1:
-        return Leaf(y)
-
-    (j, s) = best_split(X, y)
-    if j is None:              # no useful split found
-        return Leaf(y)
-
+        return Leaf(y, n_classes)
+    best = best_split(X, y, n_classes)
+    if best is None:                                   # no useful split found
+        return Leaf(y, n_classes)
+    j, s = best
     left_idx = X[:, j] <= s
-    return InternalNode(j, s,
-        build_tree(X[left_idx], y[left_idx], depth + 1, max_depth, min_samples_split),
-        build_tree(X[~left_idx], y[~left_idx], depth + 1, max_depth, min_samples_split))
+    return InternalNode(j, s,                          # recursive case
+        build_tree(X[left_idx],  y[left_idx],  depth + 1, max_depth, min_samples_split, n_classes),
+        build_tree(X[~left_idx], y[~left_idx], depth + 1, max_depth, min_samples_split, n_classes))
 ```
 
-The base cases (leaf) are the stopping conditions of Section 16; the recursive cases build the left and right subtrees. The full `DecisionTreeRegressor` and `DecisionTreeClassifier` classes in the accompanying scripts wrap this builder with `fit`/`predict`/`predict_proba` methods and add a prediction-traversal routine (Section 20).
+The pieces map to the theory:
 
-### 19.4 API
+- `gini` and `weighted_impurity` — the scoring from Part 3, verbatim.
+- `best_split` — the search from Section 3: all features, all midpoint thresholds, keep the smallest weighted impurity.
+- `build_tree` — recursion from Section 1: stop → leaf, otherwise split and call itself on each child.
+- `Leaf` stores the class counts, proportions, and majority class (Part 2). `InternalNode` stores the feature, threshold, and two children.
 
-```python
-tree = DecisionTreeRegressor(max_depth=2, min_samples_split=2)
-tree.fit(X, y)
-predictions = tree.predict(X)
+### Following the code by hand
+
+Now the moment of truth: run this on the tiny dataset from the repo's own demo —
+
+$$X = [1, 2, 3, 4, 5, 6], \qquad y = [0, 0, 1, 1, 1, 0]$$
+
+**Step 1 — the root.** `build_tree(X, y, depth=0)` checks the stopping conditions: depth 0 < max_depth, 6 samples ≥ min_samples_split, and the labels aren't pure (3 zeros, 3 ones). So it calls `best_split`.
+
+**Step 2 — the search.** One feature, values $[1,2,3,4,5,6]$, five midpoint thresholds. For each one we split and compute the weighted Gini:
+
+| Threshold | Left child | Right child | Weighted impurity $Q$ |
+|-----------|-----------|-------------|------------------------|
+| $1.5$ | [0] | [0,1,1,1,0] | $\frac{1}{6}(0) + \frac{5}{6}(0.32) \approx 0.27$ |
+| $2.5$ | [0,0] | [1,1,1,0] | $\frac{2}{6}(0) + \frac{4}{6}(0.375) = 0.25$ ✅ |
+| $3.5$ | [0,0,1] | [1,1,0] | $0.44$ |
+| $4.5$ | [0,0,1,1] | [1,0] | $0.50$ |
+| $5.5$ | [0,0,1,1,1] | [0] | $\approx 0.40$ |
+
+The winner is **$X \le 2.5$** with $Q = 0.25$. The parent's Gini was $0.5$ (3 zeros vs 3 ones), so the gain is $0.5 - 0.25 = 0.25$ — the best available.
+
+**Step 3 — recursion.** The tree splits into left `{1,2}` and right `{3,4,5,6}` and calls `build_tree` on each, now at `depth=1`.
+
+- **Left child:** labels [0,0] — pure. Stopping condition hit → `Leaf`, majority class 0, probabilities [1.0, 0.0].
+- **Right child:** labels [1,1,1,0] — 3 ones vs 1 zero, not pure. With `max_depth=1` (the repo's demo setting) the depth condition stops it → `Leaf`, majority class 1, probabilities [0.25, 0.75].
+
+**Step 4 — done.** The tree:
+
+```
+X <= 2.5 ?
+├── Yes → class 0   (P(class 1) = 0.00)
+└── No  → class 1   (P(class 1) = 0.75)
 ```
 
-```python
-tree = DecisionTreeClassifier(criterion='gini', max_depth=2)
-tree.fit(X, y)
-predictions  = tree.predict(X)
-probabilities = tree.predict_proba(X)
-```
+### Making predictions
 
-The important logic is not hidden behind libraries: the split search, impurity computation, recursion, and traversal are all implemented directly with NumPy in the provided scripts. No `sklearn.tree` is used to build the custom tree.
-
----
-
-## 20. Tree Node Representation
-
-The tree is represented in Python as a structure of **nodes**. A node is one of two kinds:
-
-- an **internal (decision) node**, which stores a split — the feature and threshold — and two children;
-- a **leaf (terminal node)**, which stores the prediction.
-
-A convenient representation gives each node these fields:
-
-```text
-feature      the index j of the splitting feature   (internal node only)
-threshold    the value s of the split                (internal node only)
-left         the left child node (feature <= threshold)
-right        the right child node (feature > threshold)
-prediction   the stored prediction / class / counts  (leaf only)
-```
-
-An internal node stores `feature`, `threshold`, `left`, `right`; a leaf stores `prediction`.
-
-**Prediction traversal** sends a new observation down the tree:
-
-```text
-if leaf:
-    return prediction
-
-if x[feature] <= threshold:
-    go left
-else:
-    go right
-```
-
-This corresponds **directly** to traversing the mathematical tree: at each decision node we answer the question "$X_j \le s$?", follow the matching branch, and finally read the leaf's prediction.
+Predicting is just walking the tree:
 
 ```python
 def predict_one(node, x):
@@ -997,348 +761,451 @@ def predict_one(node, x):
     return predict_one(node.right, x)
 ```
 
----
+New point $X = 4$: at the root, $4 \le 2.5$? No → right leaf → class 1. New point $X = 2$: $2 \le 2.5$? Yes → left leaf → class 0. The recursion here is the same idea as building, just in reverse: instead of splitting data down, we push the point down.
 
-## 21. Tiny Dataset Walkthrough
+Run `05_decision_tree_classifier.py` and you'll see exactly these predictions printed.
 
-These walkthroughs let every calculation be reproduced by hand. They are exactly the workflows performed by the provided scripts.
+The split search, visualized — each candidate threshold's weighted Gini on the left, the winning threshold against the classes on the right:
 
-### 21.1 Regression Walkthrough
+<a id="figure-2"></a>
+![Best classification split](../plots/03_best_split_classification.png)
+*Figure 2 — Left: weighted child Gini of every candidate split (dashed line: root impurity, 0.50). Right: the best threshold $X \le 2.5$ splits class 0 from class 1.*
 
-Use the one-feature data from Section 8: $X = [1,2,3,4,5,6]$, $y = [2,3,4,10,11,12]$.
+<a id="sec-4-5"></a>
+## 5. Stopping Criteria
 
-1. **Start**: all 6 observations at the root.
-2. **Candidate splits**: $X \le 1.5,\ 2.5,\ 3.5,\ 4.5,\ 5.5$.
-3. **Split errors**: $70.00, 39.25, \mathbf{4.00}, 39.25, 70.00$.
-4. **Best split**: $X \le 3.5$ (error $4$).
-5. **Recursive splitting**: the right child $\{4,5,6\}$ still has $y$-values $[10,11,12]$ that could be split, but for a shallow tree (e.g. `max_depth=1`) we stop here.
-6. **Leaves**: left leaf predicts mean$(2,3,4)=3$; right leaf predicts mean$(10,11,12)=11$.
-7. **Predictions**: any $X \le 3.5 \to 3$; any $X > 3.5 \to 11$.
+Why does the tree ever stop? Because if it never did, it would split until every leaf holds one training point — perfect training accuracy, terrible generalization. That's overfitting, and it's the topic of Part 5.
 
-Hand check the leaf means: left = $(2+3+4)/3 = 3$; right = $(10+11+12)/3 = 11$. This reproduces the means chosen in Section 8.
+The standard stop conditions:
 
-### 21.2 Classification Walkthrough
+| Condition | Meaning |
+|-----------|---------|
+| `max_depth` | Don't grow deeper than this many splits. |
+| `min_samples_split` | A node must have at least this many samples to split. |
+| `min_samples_leaf` | Reject a split that would create a child smaller than this. |
+| `max_leaf_nodes` | Stop once the tree has this many leaves. |
+| Pure node | All one class — no split can improve anything. |
+| No useful split | Best gain is 0 (or no threshold available) — splitting does nothing. |
 
-Set up a tiny binary dataset:
-
-| $X$ | class |
-|-----|-------|
-| 1 | 0 |
-| 2 | 0 |
-| 3 | 1 |
-| 4 | 1 |
-| 5 | 1 |
-| 6 | 0 |
-
-1. **Class distributions**: root has 3 zeros and 3 ones → $p=(0.5,0.5)$, $G = 0.5$.
-2. **Candidate splits** (thresholds midway between values): $X \le 1.5,\ 2.5,\ 3.5,\ 4.5,\ 5.5$.
-3. **Evaluate $X \le 2.5$**: left $\{1,2\}$ = 2 zeros, 0 ones ($G_1=0$); right $\{3,4,5,6\}$ = 1 zero, 3 ones ($p=(0.25,0.75)$, $G_2 = 1-(0.0625+0.5625)=0.375$). Weighted: $(2/6)(0) + (4/6)(0.375) = 0.25$. Gain $= 0.5 - 0.25 = 0.25$.
-4. **Evaluate $X \le 3.5$**: left $\{1,2,3\}$ = 2 zeros, 1 one ($p=(2/3,1/3)$, $G_1 = 1-(4/9+1/9)=4/9\approx0.444$); right $\{4,5,6\}$ = 1 zero, 2 ones ($G_2=0.444$). Weighted: $0.444$. Gain $= 0.5-0.444=0.056$.
-5. **Evaluate remaining splits** similarly; the best is $X \le 2.5$ (lowest weighted impurity $0.25$).
-6. **Best split**: $X \le 2.5$.
-7. **Recursive splitting**: the right child $\{3,4,5,6\}$ can be split further; a shallow tree stops.
-8. **Predictions**: $X \le 2.5 \to$ class 0 (majority); $X > 2.5 \to$ class 1 (majority of that leaf: 3 ones vs 1 zero).
-
-These numbers match the formulas in Sections 10 and 13, and the code in `03_best_split_classification.py` prints the same table.
+These are the knobs that control **tree complexity**: more splits → bigger tree → lower training error → more overfitting risk. Fewer splits → smaller tree → higher bias.
 
 ---
 
-## 22. Visualization
+<a id="part-5"></a>
+# Part 5 — Overfitting and Controlling Tree Size
 
-Matplotlib is used to make the predictions concrete.
+The algorithm from Part 4 builds a tree. Left to itself, it would keep splitting until every leaf is pure — and that's exactly the problem. This part is about why that's bad, and the two ways to stop it.
 
-For **regression**, we plot the training observations and overlay the tree's **piecewise-constant** prediction: a horizontal segment on each region at its leaf mean, jumping at the split thresholds.
+<a id="sec-5-1"></a>
+## 1. What Overfitting Looks Like
 
-For **classification**, we use a simple 2D dataset and color the plane according to the tree's predicted class. The boundary between colors shows the tree's **decision regions**.
+Give a tree no stopping conditions and it will split until each leaf holds training points of one class. Every training point is essentially its own region. Training error drops to (almost) zero.
 
-An important fact to see in these plots: ordinary decision trees make **axis-aligned splits**. Each split rules on a single feature against a single threshold ($X_j \le s$), so every decision boundary is a vertical or horizontal line in feature space. The resulting regions are axis-aligned rectangles. This is what the earlier two-feature example (Section 6) depicted, and it explains both the interpretability of trees and one of their limitations (Section 24).
+The catch: those tiny regions encode **noise, not signal**. On unseen data they predict badly, because the tree has memorized the training set rather than learned the pattern.
 
+This is the classic overfitting story: near-zero training error, high test error.
+
+<a id="sec-5-2"></a>
+## 2. The Bias-Variance Tradeoff
+
+In the linear regression material we decomposed test error as:
+
+$$\text{Test Error} = \text{Bias}^2 + \text{Variance} + \text{Irreducible Error}$$
+
+Trees illustrate this sharply:
+
+- **Shallow tree** → simpler model → high bias (underfits) → low variance.
+- **Deep tree** → complex model → low training error → high variance (overfits).
+
+Trees are notoriously **high variance** models: a small change in the training data can change the whole tree, because a slightly different top split ripples through every descendant. So the tradeoff for trees is more extreme than for most models — which is exactly why complexity control matters so much, and why Part 8's ensembles average many trees.
+
+The goal is the middle ground: deep enough to capture the pattern, shallow enough not to memorize the noise. The stopping knobs and pruning are how you find it.
+
+The classic picture — grown on noisy sine data by the repo's `06_depth_overfitting.py`:
+
+<a id="figure-3"></a>
+![Depth vs. error](../plots/06_depth_overfitting.png)
+*Figure 3 — Left: training error collapses while test error bottoms out and then rises as max_depth grows — deep trees overfit (dashed line: best test depth). Right: a depth-1 fit (high bias) vs. a depth-7 fit (high variance) on noisy sine data.*
+
+<a id="sec-5-3"></a>
+## 3. Early Stopping: Control the Tree While Building
+
+The simplest control happens *during* construction. These are the same conditions from Part 4, now as tuning tools:
+
+| Knob | What it does | Raise it | Lower it |
+|------|--------------|----------|----------|
+| `max_depth` | Caps tree height | smaller tree, less overfitting | deeper tree, more overfitting |
+| `min_samples_split` | Minimum samples to allow a split | fewer nodes split | more nodes split |
+| `min_samples_leaf` | Minimum size of any child leaf | smoother, smaller tree | tiny leaves, choppy tree |
+| `max_leaf_nodes` | Caps total number of leaves | simpler, higher-bias fit | more regions, complex fit |
+
+Rule of thumb: a small `max_depth` is the simplest way to keep a tree from memorizing individual points.
+
+<a id="sec-5-4"></a>
+## 4. Pruning: Grow First, Then Cut
+
+Early stopping decides *before* the deep branches exist. **Pruning** works the other way: grow the tree fully, then remove branches afterward.
+
+> A fully grown tree describes noise in the training data. Pruning removes unnecessary branches to get a simpler subtree.
+
+The principled version is **cost-complexity pruning**. It adds a penalty for tree size to the training error:
+
+$$R_\alpha(T) = R(T) + \alpha |T|$$
+
+Where:
+
+- $T$ — the tree (a subtree of the fully grown one)
+- $R(T)$ — training error of $T$ (misclassification rate or impurity)
+- $|T|$ — number of leaves — the tree's complexity
+- $\alpha \ge 0$ — how strongly complexity is penalized
+
+Small $\alpha$ → weak penalty → large tree. Large $\alpha$ → strong penalty → small tree. Two anchors:
+
+- $\alpha = 0$ → the fully grown tree wins (no penalty).
+- $\alpha \to \infty$ → a single leaf wins (any split costs more than it's worth).
+
+In practice, $\alpha$ is chosen by **cross-validation**: for each candidate $\alpha$, prune to the best subtree, measure validation performance, keep the $\alpha$ that does best. In scikit-learn this is `ccp_alpha` (with `cost_complexity_pruning_path` to explore values).
+
+<a id="sec-5-5"></a>
+## 5. Pruning vs. Early Stopping
+
+Both fight overfitting by shrinking the tree; they just act at different times:
+
+| | Early stopping | Pruning |
+|---|---|---|
+| When | During construction | After full growth |
+| Information | Can't see future branches | Sees the whole tree |
+| Typical tools | `max_depth`, `min_samples_*` | `ccp_alpha` |
+
+Neither is inherently better — but pruning has one advantage: it decides based on the *complete* tree, so it can see exactly what removing a branch costs.
+
+---
+
+<a id="part-6"></a>
+# Part 6 — Regression Trees
+
+Part 1 promised two types of trees. Classification got Parts 2–5. Now the second: regression trees, where the target is a number, not a class.
+
+<a id="sec-6-1"></a>
+## 1. Same Machine, Different Score
+
+Everything about the algorithm is unchanged — the questions, the thresholds, the recursion, the stopping rules. Two things differ:
+
+1. **Split score** — instead of impurity, regression uses **squared error**.
+2. **Leaf prediction** — instead of majority class, regression stores the **mean** of the leaf's target values (derived in Part 1, Section 6).
+
+<a id="sec-6-2"></a>
+## 2. The Split Score for Regression
+
+For classification, "how mixed is this node" meant "how mixed are the classes". For regression, the response is a number, so "mixed" means something else: **how much do the $y$-values vary around their mean?**
+
+The measure is the squared error:
+
+$$\text{SSE} = \sum_{i} (y_i - \bar{y})^2$$
+
+And the split score is the sum of the two children's errors:
+
+$$Q_\text{children} = \sum_{i \in R_1} (y_i - \hat c_1)^2 + \sum_{i \in R_2} (y_i - \hat c_2)^2$$
+
+where $\hat c_1, \hat c_2$ are the children's means (their would-be leaf predictions). The best split is the one with the smallest total error — exactly the "smallest weighted impurity" idea from Part 3, with squared error in place of Gini.
+
+A useful equivalent: since $\sum (y_i - \bar y)^2 = n \cdot \text{Var}(y)$, minimizing the split error is the same as minimizing the **within-child variance**. "Make each child as tight around its mean as possible."
+
+<a id="sec-6-3"></a>
+## 3. Worked Example
+
+One feature $X$, one response $y$:
+
+| $i$ | $X$ | $y$ |
+|-----|-----|-----|
+| 1 | 1 | 2 |
+| 2 | 2 | 3 |
+| 3 | 3 | 4 |
+| 4 | 4 | 10 |
+| 5 | 5 | 11 |
+| 6 | 6 | 12 |
+
+The first three $y$'s are small, the last three are large. A good split should separate them.
+
+Candidate thresholds (midpoints): $1.5, 2.5, 3.5, 4.5, 5.5$. For each, split the data, take each side's mean, and add the squared errors.
+
+**$X \le 1.5$:** left $\{2\}$ (error 0); right $\{3,4,10,11,12\}$, mean 8, error $(3-8)^2+(4-8)^2+(10-8)^2+(11-8)^2+(12-8)^2 = 70$. **Total: 70.**
+
+**$X \le 2.5$:** left $\{2,3\}$, mean 2.5, error 0.5; right $\{4,10,11,12\}$, mean 9.25, error 38.75. **Total: 39.25.**
+
+**$X \le 3.5$:** left $\{2,3,4\}$, mean 3, error 2; right $\{10,11,12\}$, mean 11, error 2. **Total: 4.** ✅
+
+**$X \le 4.5$:** left mean 4.75 (error 38.75); right mean 11.5 (error 0.5). **Total: 39.25.**
+
+**$X \le 5.5$:** left mean 6 (error 70); right $\{12\}$ (error 0). **Total: 70.**
+
+| Split | Total squared error |
+|-------|---------------------|
+| $X \le 1.5$ | 70.00 |
+| $X \le 2.5$ | 39.25 |
+| $X \le 3.5$ | **4.00** |
+| $X \le 4.5$ | 39.25 |
+| $X \le 5.5$ | 70.00 |
+
+The winner is **$X \le 3.5$** — it separates the low region from the high region, exactly the structure visible in the data.
+
+The same search, visually — each candidate's total error on the left, the winning fit on the right:
+
+<a id="figure-4"></a>
+![Best regression split](../plots/02_best_split_regression.png)
+*Figure 4 — Left: total squared error of every candidate split; $X \le 3.5$ is the clear minimum. Right: the winning piecewise-constant prediction — mean 3 up to the threshold, mean 11 after.*
+
+After the split, recursion continues on each child: the right child $\{10,11,12\}$ could be split again, and so on, until a stopping condition fires. With `max_depth=1` (the repo's `04_decision_tree_regressor.py` demo), the leaves are: left predicts mean$(2,3,4) = 3$, right predicts mean$(10,11,12) = 11$.
+
+A plot of this fit is a **staircase**: constant 3 up to $X = 3.5$, then jumping to 11 — piecewise-constant prediction (Part 1, Section 4) in action.
+
+<a id="sec-6-4"></a>
+## 4. Regression vs. Classification: Side by Side
+
+| | Classification tree | Regression tree |
+|---|---|---|
+| Target | Class / category | Continuous number |
+| Split score | Weighted impurity (Gini / entropy) | Squared error (SSE) |
+| Leaf prediction | Majority class (+ probabilities) | Mean of the leaf's $y$'s |
+| Prediction output | Class label / probabilities | A number |
+
+Same search, same recursion, same stopping rules. Only the score and the leaf rule change.
+
+The regression code mirrors the classification code exactly — the repo's `04_decision_tree_regressor.py` swaps `weighted_impurity` for `squared_error` in `best_split`, and `Leaf` stores `np.mean(y)` instead of the majority class. Everything else is identical.
+
+---
+
+<a id="part-7"></a>
+# Part 7 — Walkthroughs, Visualization, and scikit-learn
+
+This part makes everything concrete: full hand-checkable walkthroughs of both tiny datasets, what the fitted trees actually look like, and how the from-scratch version lines up with scikit-learn.
+
+<a id="sec-7-1"></a>
+## 1. Tiny Dataset Walkthroughs
+
+### 1.1 Regression walkthrough
+
+The data from Part 6: $X = [1,2,3,4,5,6]$, $y = [2,3,4,10,11,12]$.
+
+1. **Start:** all 6 observations at the root.
+2. **Candidate splits:** $X \le 1.5, 2.5, 3.5, 4.5, 5.5$.
+3. **Split errors:** $70.00, 39.25, 4.00, 39.25, 70.00$.
+4. **Best split:** $X \le 3.5$ (error 4).
+5. **Recursion:** the right child $\{4,5,6\}$ (targets $[10,11,12]$) could still be split, but `max_depth=1` stops here.
+6. **Leaves:** left → mean$(2,3,4) = 3$; right → mean$(10,11,12) = 11$.
+7. **Predictions:** any $X \le 3.5$ → 3; any $X > 3.5$ → 11.
+
+Check the leaf means by hand: $(2+3+4)/3 = 3$ and $(10+11+12)/3 = 11$. Run `04_decision_tree_regressor.py` and it prints exactly this.
+
+### 1.2 Classification walkthrough
+
+The data from Part 4: $X = [1,2,3,4,5,6]$, classes $= [0,0,1,1,1,0]$.
+
+1. **Root:** 3 zeros, 3 ones → $p = (0.5, 0.5)$, $G = 0.5$.
+2. **Candidate splits:** midpoints $1.5, 2.5, 3.5, 4.5, 5.5$.
+3. **$X \le 2.5$:** left $\{1,2\}$ → 2 zeros, 0 ones ($G_1 = 0$); right $\{3,4,5,6\}$ → 1 zero, 3 ones ($p = (0.25, 0.75)$, $G_2 = 0.375$). Weighted: $\frac{2}{6}(0) + \frac{4}{6}(0.375) = 0.25$. Gain $= 0.5 - 0.25 = 0.25$.
+4. **$X \le 3.5$:** both children $p = (2/3, 1/3)$, $G \approx 0.444$. Weighted: $0.444$. Gain $\approx 0.056$.
+5. **Best split:** $X \le 2.5$ (lowest weighted impurity, 0.25).
+6. **Recursion:** the right child $\{3,4,5,6\}$ could be split further; `max_depth=1` stops.
+7. **Leaves:** left → class 0 (2 zeros, 0 ones); right → class 1 (3 ones vs 1 zero), $P(\text{class 1}) = 0.75$.
+8. **Predictions:** $X \le 2.5$ → class 0; $X > 2.5$ → class 1.
+
+Both walkthroughs are the exact workflows in the repo's demo scripts.
+
+<a id="sec-7-2"></a>
+## 2. Visualization
+
+The plots make the piecewise-constant nature obvious.
+
+**Regression** (`04_regression_tree.png`): the training points are drawn, and the tree's prediction is overlaid — a horizontal segment at each leaf's mean, jumping at the split threshold. It's literally a staircase.
+
+**Classification** (`05_classification_regions.png`): a 2D dataset is colored by the tree's predicted class across the whole plane. The boundary between colors is the tree's decision regions.
+
+One thing to notice in both plots: **all boundaries are axis-aligned**. Every split is "$X_j \le s$" on a single feature, so every boundary is a vertical or horizontal line, and every region is a rectangle. This is the axis-aligned property from Part 1, and it's both a strength (interpretability) and a weakness (Part 8).
+
+<a id="figure-5"></a>
 ![Regression tree piecewise-constant fit](../plots/04_regression_tree.png)
-*The fitted regression tree (solid crimson) is a staircase: constant within each region, jumping at the split threshold $X=3.5$. Blue points are the training observations, with horizontal dashed lines marking each leaf's mean.*
+*Figure 5 — The fitted regression tree (solid crimson) is a staircase: constant within each region, jumping at $X = 3.5$. Blue points are the training observations.*
 
+<a id="figure-6"></a>
 ![Classification tree decision regions](../plots/05_classification_regions.png)
-*Axis-aligned decision regions of a shallow classifier on a simple 2D dataset. Each boundary is a vertical or horizontal line because every split uses a single feature and a single threshold.*
+*Figure 6 — Axis-aligned decision regions of a shallow classifier on a 2D dataset. Every boundary is vertical or horizontal.*
 
 ---
+<a id="sec-7-3"></a>
+## 3. The scikit-learn Version
 
-## 23. Decision Trees vs. Previously Studied Models
-
-| Property | Linear Regression | Logistic Regression | Decision Tree |
-|----------|-------------------|----------------------|---------------|
-| Main task | Regression | Classification | Regression / Classification |
-| Prediction structure | Linear function | Logistic transformation of a linear function | Piecewise-constant regions |
-| Nonlinear relationships | Limited without feature engineering | Limited without feature engineering | Naturally supported |
-| Feature scaling | Often useful | Often useful | Usually unnecessary |
-| Interactions | Need explicit terms | Need explicit terms | Naturally discovered |
-| Interpretability | High | High | High for small trees |
-| Overfitting control | Regularization | Regularization | Depth, minimum samples, pruning, etc. |
-
-The differences are more than cosmetic — they come from how each model represents the mapping $f(X)$:
-
-- **Linear regression** assumes $f$ is linear. It needs *explicit* polynomial or interaction terms to capture non-linearity, and coefficients are only comparable after scaling.
-- **Logistic regression** assumes the *log-odds* are linear. Like linear regression it is a parametric, global function, and it inherits the same need for feature engineering when the boundary is non-linear.
-- **Decision trees** make **no global functional assumption**. They approximate $f$ with locally constant predictions, automatically capturing non-linearity and interactions. Because each split compares a feature to a threshold, the *scale* of a feature does not matter (a threshold is just a number on that feature's own scale), so trees usually need no feature scaling.
-
-Interpretability differs too: a linear coefficient summarizes a global effect, while a small tree reads as a list of if-then rules. Overfitting is controlled differently as well — trees have no "coefficients" to shrink, so control happens through depth, minimum-sample limits, and pruning rather than regularization.
-
----
-
-## 24. Advantages and Disadvantages
-
-### Advantages
-
-- **Easy to understand and interpret**: a small tree reads like a set of if-then rules; one can explain a prediction by following the path from root to leaf.
-- **Easy to visualize**: the whole model can be drawn, unlike a high-dimensional linear function.
-- **Little preprocessing required**: missing structure aside, trees do not need dummy-coding tricks for threshold comparisons, do not require scaling, and handle mixed feature types more gracefully.
-- **Generally no feature scaling required**: a split compares one feature to a threshold $X_j \le s$; rescaling a feature merely rescales $s$. The split's *quality* is unchanged.
-- **Handles nonlinear relationships naturally**: by partitioning, trees follow curved structure without polynomial terms.
-- **Handles interactions automatically**: a tree nests questions, so the effect of one feature can depend on another without the user building interaction terms.
-- **Works for regression and classification**: the same recursive-partitioning machinery serves both tasks (mean vs. majority class).
-
-### Disadvantages
-
-- **High variance**: small changes in the training data can change the tree structure substantially, because a slightly different top split ripples through all descendants.
-- **Sensitive to small changes in training data**: directly follows from high variance; a different first split can produce a very different tree.
-- **Prone to overfitting**: a tree can split until it memorizes the training set; complexity must be actively controlled (stopping, pruning).
-- **Axis-aligned splits can be restrictive**: every boundary is parallel to a feature axis (Section 22). Relationships that are diagonal, say, may need many splits to approximate, inflating tree size.
-- **Often less predictive than ensemble methods**: because of high variance, a single tree is usually outperformed by bagging, random forests, and boosting — which build on single trees (Section 29).
-
-Each disadvantage follows from a mechanism already described: variance (from greedy recursive partitioning), overfitting (from unlimited depth), and axis-alignment (from single-feature, single-threshold splits).
-
-**Reference:**
-
-> Book: ISL  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Trees versus linear models; advantages and disadvantages of trees
-
----
-
-## 25. Hyperparameters
-
-These parameters control the underlying algorithm. The purpose of each is conceptual — this is not a scikit-learn API reference.
-
-### `max_depth`
-- **Controls**: how many nested splits the tree is allowed (height).
-- **Increases**: deeper, more complex tree, lower training error, more overfitting risk.
-- **Decreases**: shallower tree, higher bias, less variance.
-- **Complexity**: directly limits the number of splits; the strongest single complexity control.
-- **Overfitting**: a small `max_depth` is the simplest way to prevent the tree from memorizing individual points.
-
-### `min_samples_split`
-- **Controls**: how many samples a node must contain before it may split.
-- **Increases**: fewer nodes split → smaller tree.
-- **Decreases**: more nodes split → larger tree.
-- **Complexity**: a node that is too small is not allowed to create new branches.
-- **Overfitting**: raising it prevents splits with very few samples, which are usually noise.
-
-### `min_samples_leaf`
-- **Controls**: the minimum size of any child produced by a split.
-- **Increases**: each leaf must contain more samples → smaller, smoother tree.
-- **Decreases**: leaves can be tiny → deeper, choppier tree.
-- **Complexity**: caps the "resolution" of the predictions; a stricter value lowers variance.
-- **Overfitting**: forbids leaves with a handful of samples, which tend to memorize points.
-
-### `max_leaf_nodes`
-- **Controls**: the total number of terminal nodes.
-- **Increases**: more regions allowed → more complex fit.
-- **Decreases**: fewer regions → simpler, higher-bias fit.
-- **Complexity**: caps the total size of the tree from the bottom up.
-- **Overfitting**: an upper bound on leaf count bounds the model's capacity directly.
-
-### `criterion`
-- **Controls**: the score used to judge splits (e.g. `squared_error` for regression; `gini` or `entropy` for classification).
-- **Increases/Decreases**: choosing a different impurity measure usually changes the tree only slightly; Gini and entropy behave similarly.
-- **Complexity**: the measure affects which splits are *preferred*, not the depth limits.
-- **Overfitting**: not a complexity control per se; it selects among candidate splits given the other limits.
-
-### `ccp_alpha`
-- **Controls**: the cost-complexity penalty $\alpha$ from Section 18.
-- **Increases**: stronger penalty on leaves → smaller pruned subtree.
-- **Decreases**: weaker penalty → larger subtree (toward the unpruned tree).
-- **Complexity**: directly shrinks the tree after full growth.
-- **Overfitting**: growing `ccp_alpha` trades training fit for generalization by removing branches.
-
-In summary, the first five control the tree *during* construction (early stopping), while `ccp_alpha` controls it *after* construction (pruning). All of them tune the bias-variance tradeoff by modifying tree size.
-
----
-
-## 26. scikit-learn Comparison
-
-After the NumPy implementation, the corresponding library version is a single import away:
+Everything we built exists in scikit-learn, one import away:
 
 ```python
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.tree import DecisionTreeClassifier
 ```
 
-The library provides the **same underlying algorithm** we implemented:
+The library implements **the same algorithm** we've been building:
 
-- greedy recursive binary partitioning with the same candidate-threshold idea,
-- `squared_error` splits for regression, `gini`/`entropy` for classification,
-- the same stopping parameters (`max_depth`, `min_samples_split`, `min_samples_leaf`, `max_leaf_nodes`) and cost-complexity pruning (`ccp_alpha`),
-- `fit`, `predict`, and (for the classifier) `predict_proba`.
+- greedy recursive binary splitting with midpoint-style threshold search,
+- `squared_error` for regression, `gini` / `entropy` for classification,
+- the same stopping parameters (`max_depth`, `min_samples_split`, `min_samples_leaf`, `max_leaf_nodes`),
+- cost-complexity pruning via `ccp_alpha`,
+- `predict()` and, for the classifier, `predict_proba()`.
 
-So the concepts map one-to-one to our implementation. However, it is **not correct** to imply the custom implementation is equivalent to scikit-learn internally. Important differences:
+Every concept maps one-to-one. But the implementation inside is very different from our educational version:
 
-| Aspect | Educational implementation | scikit-learn |
-|--------|----------------------------|--------------|
-| Data representation | Python object graph of nodes | Compiled `Tree` structure (C arrays); a Cython-compiled CART |
-| Threshold search | Naïve scan of all midpoints | Sorted-feature presort / optimized splits, class-weighting, missing-value support |
-| Split criterion | Hand-rolled Gini/entropy/SSE | `criterion` registry with several options |
-| Extras | None | Sample weights, class weights, `max_features`, random splitter, cost-complexity path, richer predict APIs |
-| Speed | Slow on large data | Highly optimized, designed for production use |
+| Aspect | Our implementation | scikit-learn |
+|--------|--------------------|--------------|
+| Data structure | Python objects (nodes) | Compiled C arrays, Cython CART |
+| Threshold search | Naïve scan of all midpoints | Optimized, presorted splits |
+| Extras | None | Sample/class weights, `max_features`, missing-value support, pruning path |
+| Speed | Fine for teaching | Designed for production |
 
-For API-specific behavior, refer to the official scikit-learn Decision Trees documentation rather than assuming our implementation covers every option. Our version exists to teach the *algorithm*; the library exists to use it at scale.
+So the right mental model: **our code teaches the algorithm; the library uses it at scale.** For full API behavior, the scikit-learn docs are the reference.
 
 ---
 
-## 27. Computational Considerations
+<a id="part-8"></a>
+# Part 8 — Decision Trees in Practice
 
-Finding the best split is the expensive part of tree construction, because the algorithm may need to examine:
+The final part zooms out: where trees fit among other models, their real strengths and weaknesses, and how they power the ensembles you'll meet next.
 
-- **multiple features**: the split search loops over all $p$ features at every node,
-- **many candidate thresholds**: up to one threshold between each pair of adjacent distinct values of a feature,
-- **many observations**: computing the split score involves, in the naïve approach, scanning the samples in each child,
-- **many nodes**: this whole search is repeated recursively at every internal node.
+<a id="sec-8-1"></a>
+## 1. Decision Trees vs. Linear and Logistic Regression
 
-So the running time depends on the number of features, the number of distinct thresholds, the sample size, and the number of nodes. An exact closed-form complexity depends on these implementation details, so we avoid an overly precise statement. Two broad regimes are useful:
+| Property | Linear Regression | Logistic Regression | Decision Tree |
+|----------|-------------------|----------------------|---------------|
+| Main task | Regression | Classification | Both |
+| Prediction structure | Linear function | Log-odds, linear inside | Piecewise-constant regions |
+| Nonlinear patterns | Need feature engineering | Need feature engineering | Natural |
+| Feature scaling | Often useful | Often useful | Unnecessary |
+| Interactions | Need explicit terms | Need explicit terms | Discovered automatically |
+| Interpretability | High | High | High for small trees |
+| Overfitting control | Regularization | Regularization | Depth, sample limits, pruning |
 
-**Educational naïve implementation**
+The differences come from how each represents $f(X)$:
 
-```text
+- **Linear regression** assumes $f$ is linear; it needs explicit polynomial or interaction terms for anything else.
+- **Logistic regression** assumes the log-odds are linear — same global, parametric philosophy.
+- **Decision trees** assume nothing global. They approximate $f$ locally, which is why nonlinearity and interactions come for free, and why scaling doesn't matter (a threshold lives on its feature's own scale).
+
+The tradeoff: linear models are smooth, efficient, and give you a global coefficient to reason about. Trees are flexible but choppy and — as Part 5 showed — easy to overfit.
+
+<a id="sec-8-2"></a>
+## 2. Advantages and Disadvantages
+
+### Advantages
+
+- **Easy to understand and interpret** — a small tree reads as if-then rules; any prediction can be explained by its path from root to leaf.
+- **Easy to visualize** — the whole model can be drawn.
+- **Little preprocessing** — no scaling, no engineered interactions.
+- **Nonlinear patterns and interactions** come naturally.
+- **One algorithm, two tasks** — classification and regression share the same machinery.
+
+### Disadvantages
+
+- **High variance** — a small change in the training data can change the whole tree.
+- **Prone to overfitting** — without control (stopping or pruning), it memorizes the training set.
+- **Axis-aligned splits can be restrictive** — diagonal boundaries need many splits to approximate, inflating the tree.
+- **Often less accurate than ensembles** — a single tree usually loses to bagging, random forests, and boosting.
+
+Each disadvantage traces to a mechanism we covered: variance from greedy recursion, overfitting from unlimited depth, axis-alignment from single-feature thresholds.
+
+<a id="sec-8-3"></a>
+## 3. Hyperparameters at a Glance
+
+Quick reference for the knobs that control the tree:
+
+| Parameter | What it controls |
+|-----------|------------------|
+| `max_depth` | Maximum tree height — the strongest single complexity control. |
+| `min_samples_split` | Minimum samples required to allow a node to split. |
+| `min_samples_leaf` | Minimum size of any leaf; rejects splits that create tiny children. |
+| `max_leaf_nodes` | Caps the total number of leaves. |
+| `criterion` | The split score — `gini` / `entropy` for classification, `squared_error` for regression. |
+| `ccp_alpha` | Cost-complexity penalty for pruning after growth (Part 5). |
+
+The first five act *during* construction (early stopping); `ccp_alpha` acts *after* (pruning). All of them tune the bias-variance tradeoff by changing tree size.
+
+---
+<a id="sec-8-4"></a>
+## 4. Computational Considerations
+
+Finding the best split is the expensive part. At every node the tree may have to examine:
+
+- all $p$ features,
+- all candidate thresholds per feature,
+- all samples in the node to compute the score.
+
+Our educational implementation rescans the node's samples for every threshold:
+
+```
 for each node:
     for each feature:
         for each candidate threshold:
-            compute error/impurity over all samples in the node
+            compute the score over the node's samples
 ```
 
-Every candidate split rescans the node's samples, so the cost can grow roughly with the number of nodes times features times thresholds times samples-in-node. Fine on the small teaching datasets in this module; impractical on large data.
+Fine for teaching datasets, slow at scale. Production libraries speed this up by presorting features, updating counts incrementally as the threshold slides, and compiling the inner loops in C/Cython. Same algorithm, different engineering.
 
-**Optimized production implementation**
+<a id="sec-8-5"></a>
+## 5. Common Misconceptions
 
-Libraries use tricks such as:
+**"Decision trees need feature scaling."**
+No. A split compares one feature to a threshold on that feature's own scale. Rescaling just rescales the threshold; the split quality is unchanged.
 
-- **sorting** each feature's values once and updating counts incrementally as the threshold slides (avoiding a full rescan for every threshold);
-- **precomputed ordering** and cached impurity statistics per node;
-- compiled C/Cython inner loops instead of Python loops.
+**"A deeper tree is always better."**
+False. Deeper trees overfit (Part 5). The best performance is usually at some intermediate depth.
 
-These reduce the constant factor and per-threshold work dramatically. The *algorithm* is the same greedy recursive partitioning; the *engineering* differs. Do not assume our educational code has production speed — it is written for clarity.
+**"Zero training error means the model is good."**
+No — a tree that memorizes training points hits zero training error precisely because it overfits. Judge it on held-out data.
 
----
+**"Decision trees only work for classification."**
+False. Regression trees predict numbers (Part 6); `DecisionTreeRegressor` is a regression tree.
 
-## 28. Common Misconceptions
+**"Gini impurity and the Gini coefficient are the same."**
+Different quantities, same name. Gini impurity ($1 - \sum p_k^2$) measures class mixture in a node. The Gini coefficient measures statistical dispersion (e.g., income inequality). Don't confuse them.
 
-### "Decision Trees need feature scaling."
+**"Decision trees search every possible tree."**
+No. They use greedy recursive splitting (Part 4): locally best split at each node, never the whole space of trees.
 
-No. A split compares a single feature to a threshold ($X_j \le s$). Rescaling a feature rescales the threshold with it; the split's *quality* is unchanged. Trees are largely scale-invariant, unlike the gradient-descent methods in earlier chapters, which do need scaled features.
+**"Pruning and early stopping are the same."**
+They're different mechanisms (Part 5): early stopping acts during construction; pruning removes branches after full growth.
 
-### "A deeper tree is always better."
+<a id="sec-8-6"></a>
+## 6. Connection to Ensemble Learning
 
-False. A deeper tree has lower training error but higher variance and overfits (Sections 16-17). Performance on unseen data is best at some intermediate depth. Depth is a bias-variance knob, not a "bigger is better" knob.
+A single tree has high variance — the central weakness from Section 2. Ensemble methods turn that weakness into strength by combining many trees:
 
-### "Zero training error means the model is good."
-
-No. Training error measures fit to the training set, not generalization. A tree that memorizes every training point achieves near-zero training error precisely because it overfits, and performs poorly out of sample. Always evaluate on held-out data.
-
-### "Decision Trees only work for classification."
-
-False. Regression trees predict a continuous response with region means (Sections 6-8), and `DecisionTreeRegressor` in scikit-learn is a regression tree. Both regression and classification use the same partitioning machinery.
-
-### "Gini impurity and the Gini coefficient are the same."
-
-They are different quantities that happen to share a name. Gini impurity ($G = 1 - \sum p_k^2$) measures class mixture in a node (Section 10). The Gini *coefficient* is an unrelated measure of statistical dispersion (e.g., income inequality). Do not conflate them.
-
-### "Decision Trees search every possible tree."
-
-No. They use **greedy recursive binary splitting** (Section 14): at each node they pick the locally best split and never search the space of complete trees. The result is a good, not guaranteed-optimal, tree.
-
-### "Pruning and early stopping are exactly the same."
-
-They are different mechanisms (Section 18). Early stopping prevents growth during construction; pruning grows the tree fully and then removes branches. Both reduce complexity, but at different times and with different information.
-
-### "Decision Trees can represent every possible decision boundary efficiently."
-
-No. Ordinary trees use **axis-aligned** splits (Section 22), so boundaries are vertical/horizontal lines in feature space. Diagonal or otherwise non-axis-aligned boundaries need many splits to approximate, which inflates tree size. Slightly rotated or multi-feature splits can help, but standard trees stay axis-aligned.
-
----
-
-## 29. Connection to Ensemble Learning
-
-The main topic ends here by looking forward. A single tree has **high variance** (Section 24): small changes in the training data can yield very different trees. Ensemble methods exploit this by combining many trees:
-
-```text
-Decision Tree
-      ↓
-Bagging
-      ↓
-Random Forest
-      ↓
-Boosting
+```
+Decision Tree → Bagging → Random Forest → Boosting
 ```
 
-- **Bagging** trains many trees on resampled versions of the data and averages their predictions, reducing variance.
-- **Random Forests** are bagged trees that also randomize the features available at each split, decorrelating the trees further.
-- **Boosting** trains trees sequentially, each one focusing on the mistakes of the previous ones, reducing bias.
+- **Bagging** trains many trees on resampled data and averages their predictions — cutting variance.
+- **Random Forests** bag trees *and* randomize the features available at each split, decorrelating them further.
+- **Boosting** trains trees sequentially, each one focusing on the previous trees' mistakes — cutting bias.
 
-The shared motivation is that averaging or sequentially correcting many **(weak, high-variance) decision trees** produces a model that generalizes far better than any single tree. This is precisely why decision trees are worth studying even though a single tree is often less predictive than an ensemble.
+The shared idea: many weak, high-variance trees combined generalize far better than any single tree. That's exactly why decision trees matter even when a single tree underperforms an ensemble — and why they're studied first. These methods are their own chapters next; all you need now is the connection: **random forests and boosting build on decision trees.**
 
-These topics — bagging, random forests, boosting — will become separate chapters later. Here we only need the connection: **random forests and boosting build on decision trees**, and the reason traces to the tree's variance.
+<a id="sec-8-7"></a>
+## 7. Key Takeaways
 
-**Reference:**
+- A **decision tree** partitions the feature space into regions and predicts with a constant per region: mean (regression) or majority class (classification).
+- Every question is **one feature vs. one threshold** — "Is $X_j \le s$?"
+- Splitting recursively makes nodes **purer**; mixed nodes are a coin flip, pure nodes are certain.
+- **Entropy** measures a node's mixedness as expected surprise, in bits: $-\sum p_k \log_2 p_k$.
+- **Gini impurity** measures it as the chance of a wrong random guess: $1 - \sum p_k^2$.
+- **Weighted child impurity** combines the two children, weighted by sample counts.
+- **Information gain** = parent impurity − weighted child impurity; the tree keeps the split with the largest gain.
+- The tree is built **greedily and recursively**: best split here, no global search.
+- Growth is controlled by **stopping** (depth/sample limits) and **pruning** ($R_\alpha(T) = R(T) + \alpha|T|$).
+- Deep trees **overfit**; that's the bias-variance tradeoff in its sharpest form.
+- Boundaries are **axis-aligned** — vertical/horizontal lines, rectangular regions.
+- A single tree is often weaker than **ensembles** — which is exactly why bagging, random forests, and boosting exist.
 
-> Book: ISLP  
-> Chapter: 9 - Tree-Based Methods  
-> Topic: Bagging, random forests, and boosting
+<a id="sec-8-8"></a>
+## 8. References
 
-> Book: ESL  
-> Chapter: 16 - Random Forests  
-> Topic: Bagging and random forests
-
-> Book: ESL  
-> Chapter: 11 - Boosting and Additive Trees  
-> Topic: Boosting
-
----
-
-## 30. Key Takeaways
-
-- **Decision tree**: a model that partitions the feature space into regions and predicts with a constant (mean or majority class) per region.
-- **Node**: a point in the tree where a question/split is made.
-- **Split**: a question "$X_j \le s$" that divides a node's observations into two groups.
-- **Threshold**: the value $s$ in the split.
-- **Leaf**: a terminal node holding the prediction.
-- **Region**: the subset of the feature space corresponding to a leaf.
-- **Regression tree**: predicts each region's mean; the leaf prediction is the least-squares constant (Section 7).
-- **Classification tree**: predicts each region's majority class and can output class probabilities.
-- **Recursive binary splitting**: building the tree by repeatedly splitting data into two, recursively.
-- **Squared-error criterion**: the regression split score, $\sum_{R_1}(y_i-\hat c_1)^2 + \sum_{R_2}(y_i-\hat c_2)^2$.
-- **Gini impurity**: $1 - \sum p_k^2$; $0$ for a pure node.
-- **Entropy**: $-\sum p_k \log p_k$; $0$ for a pure node.
-- **Information gain**: $Q_\text{parent} - Q_\text{children}$, the impurity reduction from a split.
-- **Weighted impurity**: $\frac{N_1}{N}Q_1 + \frac{N_2}{N}Q_2$, used to compare classification splits.
-- **Greedy splitting**: picking the locally best split at each node, not an optimal global tree.
-- **Stopping criteria**: depth/sample limits that end growth; they control tree size.
-- **Overfitting**: a deep tree's training error is low but test performance poor.
-- **Pruning**: removing branches from a fully grown tree.
-- **Cost-complexity**: minimizing $R_\alpha(T) = R(T) + \alpha|T|$; larger $\alpha$ gives smaller trees.
-- **Bias-variance tradeoff**: tree complexity tunes the balance; this drives both stopping and pruning.
-- **Axis-aligned decision boundaries**: every split cuts along a single feature, so regions are rectangles.
+- James, G., Witten, D., Hastie, T., Tibshirani, R., & Taylor, J. (2023). *An Introduction to Statistical Learning with Applications in Python* (1st ed.). Springer. — ISLP Chapter 9: Tree-Based Methods.
+- Hastie, T., Tibshirani, R., & Friedman, J. (2009). *The Elements of Statistical Learning: Data Mining, Inference, and Prediction* (2nd ed.). Springer. — ESL Chapter 10: Additive Models, Trees, and Related Methods; Chapter 11: Boosting and Additive Trees; Chapter 16: Random Forests.
+- scikit-learn developers. *Decision Trees* documentation. https://scikit-learn.org/stable/modules/tree.html
 
 ---
-
-## 31. References
-
-> **References Summary**
->
-> - James, G., Witten, D., Hastie, T., Tibshirani, R., & Taylor, J. (2023). *An Introduction to Statistical Learning with Applications in Python* (1st ed.). Springer.
-> - Hastie, T., Tibshirani, R., & Friedman, J. (2009). *The Elements of Statistical Learning: Data Mining, Inference, and Prediction* (2nd ed.). Springer.
-> - scikit-learn developers. *Decision Trees* documentation. https://scikit-learn.org/stable/modules/tree.html
->
-> Chapter-level references in this document:
->
-> - ISLP **Chapter 9 — Tree-Based Methods**.
-> - ESL **Chapter 10 — Additive Models, Trees, and Related Methods**.
-> - ESL **Chapter 11 — Boosting and Additive Trees**.
-> - ESL **Chapter 16 — Random Forests**.
->
-> External references are intentionally chapter/topic level here. Exact page locations vary by edition and printing, so I have avoided unverified page citations.
