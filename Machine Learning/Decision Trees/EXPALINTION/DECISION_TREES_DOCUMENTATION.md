@@ -637,24 +637,93 @@ Instead, the tree is **greedy**: at each node it picks the single best split *fo
 Is that a problem? Sometimes. But it's the standard approach used by every major library, and it works well in practice. Worth remembering: the result is a *good* tree, not necessarily the *optimal* one.
 
 <a id="sec-4-3"></a>
-## 3. Searching for the Best Split
+## 3. Finding the Best Split,
 
-To find the best split at a node, the tree checks **every feature and every candidate threshold**:
+At each node, the job is simple: find the single question `Feature <= threshold` that makes the children purest. The algorithm is brute-force and greedy:
 
 ```
 for each feature j:
-    for each threshold s (between consecutive values of feature j):
+    for each threshold s (midpoint between consecutive distinct values of feature j):
         split the node's data on "X_j <= s"
-        compute the weighted child impurity (Part 3)
-        remember the best (j, s) so far
+        compute weighted child impurity (Part 3)
+        remember the (j, s) with smallest weighted impurity
 ```
 
-Two details worth noting:
+Smallest weighted impurity == largest information gain. The parent impurity is fixed, so minimizing children is the whole search. Each child then repeats the same search on its own slice. The example below is that search worked on a whiteboard for one split.
 
-- **Candidate thresholds** are the midpoints between consecutive distinct values of the feature. With values $1, 2, 3, 4, 5, 6$, the tree tries $1.5, 2.5, 3.5, 4.5, 5.5$. (Splitting at $2$ instead of $2.5$ gives the exact same partition — both send $1$ and $2$ left.)
-- **The best split** is the one with the smallest weighted child impurity — equivalently, the largest information gain. The parent's impurity is fixed, so minimizing $Q_\text{children}$ and maximizing gain are the same thing.
+### Step 1 — Dummy dataset (6 rows)
 
-The tree then splits the data, and each child runs this same search on its own slice of the data. Repeat until a stopping condition says stop.
+| # | Height (cm) | Weight (kg) | Target |
+|---|-------------|-------------|--------|
+| 1 | 30 | 5  | Cat |
+| 2 | 38 | 8  | Cat |
+| 3 | 42 | 12 | Cat |
+| 4 | 48 | 18 | Dog |
+| 5 | 55 | 25 | Dog |
+| 6 | 62 | 28 | Dog |
+
+Two numeric features, one binary target. Sorted by `Height`: `[30, 38, 42, 48, 55, 62]`. Candidate thresholds for `Height` are midpoints: `34, 40, 45, 51.5, 58.5`. Same logic applies to `Weight`.
+
+We will evaluate **one feature: `Height`** at **one threshold: `Height <= 45`** (midpoint between 42 and 48). This is a clean split to show the math; the code would score all five Height thresholds and all Weight thresholds the same way and keep the minimum.
+
+Recall from Part 3:
+
+$$G = 1 - \sum_{k} p_k^2 \qquad p_k = N_k / N$$
+
+### Step 2 — Whiteboard calculations
+
+**2a. Parent node (before split) — 3 Cats, 3 Dogs, N=6**
+
+$$p_{Cat}=3/6=0.5,\quad p_{Dog}=3/6=0.5$$
+
+$$G_{parent} = 1 - (0.5^2 + 0.5^2) = 1 - (0.25 + 0.25) = 0.50$$
+
+Interpretation: If you guess the class by sampling from this node's distribution, you are wrong 50% of the time. Maximally mixed for 2 classes.
+
+**2b. Left child — `Height <= 45` — rows 1,2,3 — 3 Cats, 0 Dogs, N=3**
+
+$$p_{Cat}=3/3=1.0,\quad p_{Dog}=0/3=0.0$$
+
+$$G_{left} = 1 - (1.0^2 + 0.0^2) = 1 - 1 = 0.00$$
+
+Pure node. No misclassification risk.
+
+**2c. Right child — `Height > 45` — rows 4,5,6 — 0 Cats, 3 Dogs, N=3**
+
+$$p_{Cat}=0/3=0.0,\quad p_{Dog}=3/3=1.0$$
+
+$$G_{right} = 1 - (0.0^2 + 1.0^2) = 1 - 1 = 0.00$$
+
+Also pure.
+
+**2d. Weighted child impurity (what the code actually minimizes)**
+
+$$Q_{children} = \frac{N_{left}}{N} G_{left} + \frac{N_{right}}{N} G_{right} = \frac{3}{6}(0.00) + \frac{3}{6}(0.00) = 0.00$$
+
+**2e. Information Gain**
+
+$$\text{Gain} = G_{parent} - Q_{children} = 0.50 - 0.00 = 0.50$$
+
+For contrast, a worse threshold on the same feature — `Height <= 34` (only row 1 left, rows 2-6 right: left 1 Cat/0 Dogs G=0, right 2 Cats/3 Dogs p=(0.4,0.6) G=0.48, weighted = 1/6*0 + 5/6*0.48 = 0.40, gain = 0.10) — is correctly ranked worse than `45`. The search keeps `45` because 0.00 < 0.40.
+
+In Python, that's exactly:
+
+```python
+left_y  = y[X[:, height_idx] <= 45]  # [Cat, Cat, Cat] -> G=0.0
+right_y = y[X[:, height_idx] >  45]  # [Dog, Dog, Dog] -> G=0.0
+Q = (3/6)*0.0 + (3/6)*0.0  # 0.0
+```
+
+### Step 3 — Why the children are better than the parent
+
+| Node | Gini | Meaning |
+|------|------|---------|
+| Parent | 0.50 | Coin flip. Model has to guess. High expected misclassification. |
+| Left + Right (weighted) | 0.00 | Both pure. If a new animal lands left, predict `Cat` with 100% training support. If right, predict `Dog` with 100% support. Zero expected misclassification. |
+
+Lower Gini = less mixed = more confident leaf predictions. The drop from 0.50 → 0.00 is the largest possible gain here (0.50), which is why this split wins the search. A split with higher weighted Gini (e.g., 0.40) would still beat the parent but would leave a mixed child that forces uncertain predictions.
+
+Takeaway for implementation: do not eyeball it. Compute `G_parent` once, loop every `(feature, midpoint)` pair, compute `Q_children` as above, keep the minimum. Repeat recursively on each child until a stopping rule fires.
 
 ---
 <a id="sec-4-4"></a>
