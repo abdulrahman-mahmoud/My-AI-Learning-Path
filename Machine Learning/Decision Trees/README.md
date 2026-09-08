@@ -12,7 +12,7 @@ It has three things:
 
 | Folder / File | Why it exists |
 |---|---|
-| [`EXPALINTION/`](./EXPALINTION/README.md) | Written explanation for the decision tree work |
+| [`docs/`](./docs/README.md) | Written explanation for the decision tree work |
 | [`pycode_DecisionTrees/`](./pycode_DecisionTrees/README.md) | Python scripts for the decision tree examples |
 | [`plots/`](./plots/README.md) | Saved figures used in the decision tree material |
 
@@ -27,6 +27,6 @@ It has three things:
 
 - [Repository root](../../README.md)
 - [Machine Learning](../README.md)
-- [Documentation](./EXPALINTION/README.md)
+- [Documentation](./docs/README.md)
 - [Python scripts](./pycode_DecisionTrees/README.md)
 - [Plots](./plots/README.md)

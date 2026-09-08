@@ -30,5 +30,5 @@ The core implementations are `04_decision_tree_regressor.py` and
 ## Navigation
 
 - [Decision Trees](../README.md)
-- [Documentation](../EXPALINTION/README.md)
+- [Documentation](../docs/README.md)
 - [Plots](../plots/README.md)

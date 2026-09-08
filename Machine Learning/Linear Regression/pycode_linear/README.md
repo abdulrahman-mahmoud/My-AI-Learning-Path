@@ -26,5 +26,5 @@ The numbering shows the order of the learning path. It starts with basic regress
 ## Navigation
 
 - [Linear Regression](../README.md)
-- [Documentation](../EXPALINTION/README.md)
+- [Documentation](../docs/README.md)
 - [Plots](../plots/README.md)

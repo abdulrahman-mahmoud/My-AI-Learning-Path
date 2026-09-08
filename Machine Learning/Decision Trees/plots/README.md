@@ -26,5 +26,5 @@ They are here to show what the scripts are doing and to make the docs easier to 
 ## Navigation
 
 - [Decision Trees](../README.md)
-- [Documentation](../EXPALINTION/README.md)
+- [Documentation](../docs/README.md)
 - [Python scripts](../pycode_DecisionTrees/README.md)

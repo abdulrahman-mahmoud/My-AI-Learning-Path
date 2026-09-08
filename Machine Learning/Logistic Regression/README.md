@@ -8,7 +8,7 @@ It includes the written explanation and the Python scripts for the workflow.
 
 | Folder / File | Why it exists |
 |---|---|
-| [`EXPALINTION/`](./EXPALINTION/README.md) | Written explanation for logistic regression |
+| [`docs/`](./docs/README.md) | Written explanation for logistic regression |
 | [`pycode_Logistic/`](./pycode_Logistic/README.md) | Python scripts for logistic regression examples |
 
 ## Current progress
@@ -21,5 +21,5 @@ It includes the written explanation and the Python scripts for the workflow.
 
 - [Repository root](../../README.md)
 - [Machine Learning](../README.md)
-- [Documentation](./EXPALINTION/README.md)
+- [Documentation](./docs/README.md)
 - [Python scripts](./pycode_Logistic/README.md)

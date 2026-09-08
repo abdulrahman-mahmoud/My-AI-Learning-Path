@@ -1,32 +1,21 @@
 # Machine Learning
 
-This is the main learning folder in the repo.
+From-scratch implementations of the basics.
+Each folder pairs its scripts with a written doc.
 
-Right now it has three tracks:
+## State
 
-- Linear Regression
-- Logistic Regression
-- Decision Trees
+Linear Regression finished. Docs, 10 scripts, 18 plots.
+Logistic Regression has docs and 8 scripts. No plots.
+Decision Trees finished. Docs, 8 scripts, 6 plots. Script 07 compares against scikit-learn.
 
-## What is inside
+## Folders
 
-| Folder | What it contains |
-|---|---|
-| [`Linear Regression/`](./Linear%20Regression/README.md) | Docs, scripts, and plots for linear regression |
-| [`Logistic Regression/`](./Logistic%20Regression/README.md) | Docs and scripts for logistic regression |
-| [`Decision Trees/`](./Decision%20Trees/README.md) | Docs, scripts, and plots for decision trees |
-
-## Current state
-
-- Linear regression is the more complete track.
-- Logistic regression is also in place and usable on its own.
-- Decision trees builds on both and is in place with its own docs, scripts, and plots.
-- All three tracks already have markdown docs.
+[`Linear Regression/`](./Linear%20Regression/README.md) — start here, most complete.
+[`Logistic Regression/`](./Logistic%20Regression/README.md) — docs and code only.
+[`Decision Trees/`](./Decision%20Trees/README.md) — builds on the regression material.
 
 ## Navigation
 
 - [Repository root](../README.md)
 - [Books](../Books/README.md)
-- [Linear Regression](./Linear%20Regression/README.md)
-- [Logistic Regression](./Logistic%20Regression/README.md)
-- [Decision Trees](./Decision%20Trees/README.md)

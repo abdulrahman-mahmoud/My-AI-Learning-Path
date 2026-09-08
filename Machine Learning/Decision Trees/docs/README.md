@@ -1,8 +1,6 @@
-# EXPALINTION
+# docs
 
 This folder holds the written docs for decision trees.
-
-The folder name is kept exactly as it exists in the repo.
 
 ## Files
 

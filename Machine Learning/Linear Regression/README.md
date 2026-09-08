@@ -12,7 +12,7 @@ It has three things:
 
 | Folder / File | Why it exists |
 |---|---|
-| [`EXPALINTION/`](./EXPALINTION/README.md) | Written explanation for the linear regression work |
+| [`docs/`](./docs/README.md) | Written explanation for the linear regression work |
 | [`pycode_linear/`](./pycode_linear/README.md) | Python scripts for the linear regression examples |
 | [`plots/`](./plots/README.md) | Saved figures used in the linear regression material |
 
@@ -26,6 +26,6 @@ It has three things:
 
 - [Repository root](../../README.md)
 - [Machine Learning](../README.md)
-- [Documentation](./EXPALINTION/README.md)
+- [Documentation](./docs/README.md)
 - [Python scripts](./pycode_linear/README.md)
 - [Plots](./plots/README.md)

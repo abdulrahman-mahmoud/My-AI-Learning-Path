@@ -1,8 +1,6 @@
-# EXPALINTION
+# docs
 
 This folder holds the written docs for linear regression.
-
-The folder name is kept as-is from the repo.
 
 ## Files
 

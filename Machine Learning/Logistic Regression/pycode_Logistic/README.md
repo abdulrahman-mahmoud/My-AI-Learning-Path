@@ -24,4 +24,4 @@ The numbering shows the order of the learning path. It starts with the sigmoid f
 ## Navigation
 
 - [Logistic Regression](../README.md)
-- [Documentation](../EXPALINTION/README.md)
+- [Documentation](../docs/README.md)
